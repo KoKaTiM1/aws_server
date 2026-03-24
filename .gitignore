@@ -1,0 +1,118 @@
+# ===================================
+# DAR (Document Analysis Road Safety)
+# AWS Infrastructure & Services
+# ===================================
+
+# Environment and Secrets
+.env
+.env.*
+*.env
+secrets/
+*.key
+*.pem
+*.ppk
+firebase-*.json
+firebase-adminsdk-*.json
+
+# AWS Credentials
+.aws/
+credentials
+config
+
+# Terraform State Files
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform/
+.terraform.lock.hcl
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+dist/
+build/
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+*.log.*
+db-connection.txt
+worker-logs.json
+firebase-check.txt
+logs-latest.txt
+ecr-token.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~.nib
+.cache
+api_*.txt
+logs.txt
+
+# Build outputs
+*.exe
+*.dll
+*.so
+*.dylib
+*.zip
+*.tar.gz
+
+# Test coverage
+coverage/
+*.cover
+.coverage
+.pytest_cache/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated documentation
+docs/_build/
+site/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Migration temp files
+migration-*.sql.tmp

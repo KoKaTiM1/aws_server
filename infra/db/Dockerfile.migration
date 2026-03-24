@@ -1,0 +1,5 @@
+FROM postgres:15-alpine
+
+COPY infra/db/migrations/001_init_schema.sql /migration.sql
+
+CMD ["sh", "-c", "echo 'Running migration...' && PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USERNAME -d $DB_NAME -f /migration.sql && echo 'Verifying tables...' && PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USERNAME -d $DB_NAME -c '\\dt' && echo 'Verifying PostGIS...' && PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USERNAME -d $DB_NAME -c 'SELECT PostGIS_Version();' && echo 'Migration completed successfully!'"]

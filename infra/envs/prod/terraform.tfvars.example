@@ -1,0 +1,59 @@
+# Example Terraform Variables File
+# Copy this file to terraform.tfvars and update with your values
+
+# Environment
+env_name = "prod"
+region   = "us-east-1"
+
+# Network Configuration
+vpc_cidr             = "10.0.0.0/16"
+availability_zones   = ["us-east-1a", "us-east-1b"]
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24"]
+
+# NAT Gateway: 1 for cost savings, 2 for high availability
+nat_gateway_count = 1
+
+# VPC Endpoints
+enable_s3_endpoint         = true  # Highly recommended for cost savings
+enable_interface_endpoints = false # Enable when budget allows
+
+# Domain Configuration
+domain_name    = "api.example.com"       # CHANGE THIS
+hosted_zone_id = "Z1234567890ABC"        # CHANGE THIS
+
+# Database Configuration
+rds_instance_class    = "db.t4g.micro"
+rds_allocated_storage = 20
+rds_multi_az          = false # Set to true for production HA
+
+# Redis Configuration
+redis_node_type      = "cache.t4g.micro"
+redis_num_cache_nodes = 1
+
+# ECS Service Configuration
+image_tag_api            = "latest"
+image_tag_worker_ingest  = "latest"
+image_tag_worker_verify  = "latest"
+image_tag_dashboard      = "latest"
+
+api_desired_count           = 1
+worker_ingest_desired_count = 1
+worker_verify_desired_count = 0 # Set to 1+ to enable ML verification worker
+dashboard_desired_count     = 1
+
+# Observability Configuration
+log_retention_days         = 30
+enable_container_insights  = false # Enable when budget allows
+
+monthly_budget_amount = 100
+budget_alert_emails   = ["admin@example.com"] # CHANGE THIS
+
+# WAF Configuration
+enable_waf      = true
+waf_rate_limit  = 2000 # Requests per 5 minutes
+
+# CI/CD Configuration
+github_org      = "your-github-org"   # CHANGE THIS
+github_repo     = "your-repo-name"    # CHANGE THIS
+github_branches = ["main", "prod"]
