@@ -1,0 +1,142 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  AWS_REGION: us-east-1
+  REGISTRY_ALIAS: eyedar
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      api_image: ${{ steps.image.outputs.api_image }}
+      worker_ingest_image: ${{ steps.image.outputs.worker_ingest_image }}
+      worker_verify_image: ${{ steps.image.outputs.worker_verify_image }}
+      worker_notify_image: ${{ steps.image.outputs.worker_notify_image }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/prod-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./workers/api
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-api:latest
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-api:${{ github.sha }}
+
+      - name: Build and push worker-ingest image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./workers/worker-ingest
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-ingest:latest
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-ingest:${{ github.sha }}
+          dockerfile: Dockerfile
+
+      - name: Build and push worker-verify image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./workers/worker-verify
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-verify:latest
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-verify:${{ github.sha }}
+          dockerfile: Dockerfile
+
+      - name: Build and push worker-notify image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./workers/worker-notify
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-notify:latest
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-notify:${{ github.sha }}
+
+      - name: Output image URIs
+        id: image
+        run: |
+          REGISTRY=${{ steps.login-ecr.outputs.registry }}
+          echo "api_image=${REGISTRY}/eyedar-api:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "worker_ingest_image=${REGISTRY}/eyedar-worker-ingest:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "worker_verify_image=${REGISTRY}/eyedar-worker-verify:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "worker_notify_image=${REGISTRY}/eyedar-worker-notify:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/prod-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update ECS services
+        run: |
+          # Update API service
+          aws ecs update-service \
+            --cluster eyedar-prod \
+            --service eyedar-prod-api \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
+
+          # Update worker-ingest service
+          aws ecs update-service \
+            --cluster eyedar-prod \
+            --service eyedar-prod-worker-ingest \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
+
+          # Update worker-verify service (if exists)
+          aws ecs update-service \
+            --cluster eyedar-prod \
+            --service eyedar-prod-worker-verify \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }} 2>/dev/null || true
+
+          # Update worker-notify service
+          aws ecs update-service \
+            --cluster eyedar-prod \
+            --service eyedar-prod-worker-notify \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Wait for deployments
+        run: |
+          for service in eyedar-prod-api eyedar-prod-worker-ingest eyedar-prod-worker-notify; do
+            echo "Waiting for $service to stabilize..."
+            aws ecs wait services-stable \
+              --cluster eyedar-prod \
+              --services $service \
+              --region ${{ env.AWS_REGION }} || echo "Service $service did not stabilize (may be normal for optional services)"
+          done
