@@ -318,3 +318,20 @@ module "github_oidc" {
 
   tags = local.tags
 }
+
+# CI/CD Deployment Policies
+module "deploy_policies" {
+  source = "../../modules/60-cicd/deploy_policies"
+
+  github_deploy_role_arn = module.github_oidc.github_actions_role_arn
+
+  ecr_repo_arns = [
+    module.ecr.ecr_repo_arn_api,
+    module.ecr.ecr_repo_arn_worker_ingest,
+    module.ecr.ecr_repo_arn_worker_verify,
+    module.ecr.ecr_repo_arn_dashboard
+  ]
+
+  ecs_cluster_arn  = module.ecs_cluster.ecs_cluster_arn
+  ecs_cluster_name = module.ecs_cluster.ecs_cluster_name
+}
