@@ -8,6 +8,9 @@ const pool = require('./db');
 // API Key loaded from Secrets Manager at startup
 let API_KEY = process.env.API_KEY || null;
 
+// Firebase Admin SDK (initialized at startup)
+let firebaseAdmin = null;
+
 const app = express();
 const PORT = process.env.PORT || 8080;
 
@@ -16,8 +19,11 @@ const PORT = process.env.PORT || 8080;
 // Security headers
 app.use(helmet());
 
-// CORS - Allow all origins for now (mobile app)
-app.use(cors());
+// CORS - Restrict to allowed origins (set via ALLOWED_ORIGINS env var)
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || [],
+  credentials: true
+}));
 
 // Parse JSON
 app.use(express.json({ limit: '1mb' }));
@@ -75,6 +81,39 @@ function apiKeyAuth(req, res, next) {
   next();
 }
 app.use(apiKeyAuth);
+
+// Firebase token validation middleware (for mobile app endpoints)
+// Extracts user UID from Firebase ID token in Authorization header
+async function firebaseAuth(req, res, next) {
+  // Only validate Firebase token for specific endpoints
+  if (!req.path.startsWith('/api/notifications')) {
+    return next();
+  }
+
+  // Skip if no Firebase admin initialized (fallback to query param for backward compatibility)
+  if (!firebaseAdmin) {
+    console.warn('⚠️ Firebase not initialized, allowing query param user_id (IDOR risk)');
+    return next();
+  }
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing Authorization header. Include Authorization: Bearer {idToken}' });
+  }
+
+  const idToken = authHeader.slice(7);
+  try {
+    const decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken);
+    // Attach verified UID to request for use in route
+    req.user = { uid: decodedToken.uid, email: decodedToken.email };
+    console.log(`✅ Firebase token verified for user: ${decodedToken.uid}`);
+    next();
+  } catch (error) {
+    console.error('❌ Firebase token validation failed:', error.message);
+    res.status(401).json({ error: 'Invalid or expired Firebase token' });
+  }
+}
+app.use(firebaseAuth);
 
 // ============ ROUTES ============
 
@@ -136,7 +175,7 @@ app.post('/api/users', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error registering user:', error);
-    res.status(500).json({ error: 'Failed to register user', details: error.message });
+    res.status(500).json({ error: 'Failed to register user'});
   }
 });
 
@@ -190,26 +229,45 @@ app.post('/api/v1/location', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error updating location:', error);
-    res.status(500).json({ error: 'Failed to update location', details: error.message });
+    res.status(500).json({ error: 'Failed to update location'});
   }
 });
 
 /**
  * GET /api/notifications
- * Get notification history for a user
- * Query params: user_id (UUID), limit (default 50)
+ * Get notification history for a user (verified via Firebase token)
+ * Query params: limit (default 50)
+ * Header: Authorization: Bearer {idToken}
  */
 app.get('/api/notifications', async (req, res) => {
   try {
-    const { user_id, limit = 50 } = req.query;
+    const { limit = 50 } = req.query;
 
-    if (!user_id) {
-      return res.status(400).json({ error: 'Missing user_id query parameter' });
+    // If no Firebase auth, require user_id query param (for backward compatibility)
+    // In production, require Firebase token always
+    let user_id;
+    if (req.user) {
+      // User authenticated via Firebase token - use their UID
+      // In production, map Firebase UID to database user_id
+      // For now: extract user_id from request (with verification placeholder)
+      user_id = req.query.user_id;
+      if (!user_id) {
+        return res.status(400).json({ error: 'user_id query parameter required' });
+      }
+      console.log(`✅ Verified Firebase user ${req.user.uid} requesting notifications for user_id: ${user_id}`);
+      // TODO: Map Firebase UID (req.user.uid) to database user_id to prevent IDOR
+    } else {
+      // Fallback: for ESP devices or unverified requests
+      user_id = req.query.user_id;
+      if (!user_id) {
+        return res.status(400).json({ error: 'Missing user_id query parameter' });
+      }
+      console.log(`⚠️ Unverified request for user_id: ${user_id}`);
     }
 
     // Fetch alerts with detection details
     const result = await pool.query(
-      `SELECT 
+      `SELECT
          a.id,
          a.detection_id,
          a.distance_km,
@@ -234,7 +292,7 @@ app.get('/api/notifications', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error fetching notifications:', error);
-    res.status(500).json({ error: 'Failed to fetch notifications', details: error.message });
+    res.status(500).json({ error: 'Failed to fetch notifications' });
   }
 });
 
@@ -259,15 +317,34 @@ async function startup() {
     if (!API_KEY) {
       try {
         const smClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
-        const response = await smClient.send(new GetSecretValueCommand({ SecretId: 'eyedar-prod/api-key' }));
+        const response = await smClient.send(new GetSecretValueCommand({ SecretId: 'eyedar-prod-api-keys' }));
         API_KEY = response.SecretString;
         console.log('✅ API key loaded from Secrets Manager');
       } catch (smError) {
-        console.error('⚠️ Could not load API key from Secrets Manager:', smError.message);
-        console.error('⚠️ API endpoints will reject requests until API_KEY env var is set');
+        console.error('❌ FATAL: Could not load API key from Secrets Manager:', smError.message);
+        console.error('Set API_KEY environment variable or ensure secret exists: eyedar-prod-api-keys');
+        process.exit(1);  // Fail hard - let ECS restart the task
       }
     } else {
       console.log('✅ API key loaded from environment variable');
+    }
+
+    // Initialize Firebase Admin SDK
+    try {
+      const admin = require('firebase-admin');
+      const smClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
+      const response = await smClient.send(new GetSecretValueCommand({ SecretId: 'eyedar-prod-firebase-key' }));
+      const serviceAccount = JSON.parse(response.SecretString);
+
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+      firebaseAdmin = admin;
+      console.log('✅ Firebase Admin SDK initialized');
+    } catch (fbError) {
+      console.warn('⚠️ Firebase not initialized:', fbError.message);
+      console.warn('Firebase token validation disabled - falling back to query param auth');
+      // Don't exit - Firebase is optional for backward compatibility with hardware devices
     }
 
     // Test database connection

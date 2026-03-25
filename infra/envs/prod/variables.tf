@@ -99,31 +99,31 @@ variable "redis_num_cache_nodes" {
 
 # ECS Configuration
 variable "image_tag_api" {
-  description = "Docker image tag for API service"
+  description = "Docker image tag for API service - CI/CD should override with git SHA"
   type        = string
   default     = "latest"
 }
 
 variable "image_tag_worker_ingest" {
-  description = "Docker image tag for worker-ingest service"
+  description = "Docker image tag for worker-ingest service - CI/CD should override with git SHA"
   type        = string
   default     = "latest"
 }
 
 variable "image_tag_worker_verify" {
-  description = "Docker image tag for worker-verify service"
+  description = "Docker image tag for worker-verify service - CI/CD should override with git SHA"
   type        = string
   default     = "latest"
 }
 
 variable "image_tag_worker_notify" {
-  description = "Docker image tag for worker-notify service"
+  description = "Docker image tag for worker-notify service - CI/CD should override with git SHA"
   type        = string
   default     = "latest"
 }
 
 variable "image_tag_dashboard" {
-  description = "Docker image tag for dashboard service"
+  description = "Docker image tag for dashboard service - CI/CD should override with git SHA"
   type        = string
   default     = "latest"
 }
@@ -174,7 +174,7 @@ variable "enable_container_insights" {
 variable "monthly_budget_amount" {
   description = "Monthly budget limit in USD"
   type        = number
-  default     = 100
+  default     = 100  # Start lean, upgrade later as needed
 }
 
 variable "budget_alert_emails" {

@@ -12,7 +12,8 @@
   "author": "DAR Ltd",
   "license": "PROPRIETARY",
   "dependencies": {
-    "aws-sdk": "^2.1500.0",
+    "@aws-sdk/client-sqs": "^3.500.0",
+    "@aws-sdk/client-secrets-manager": "^3.500.0",
     "firebase-admin": "^12.0.0",
     "pg": "^8.11.3",
     "dotenv": "^16.3.1"

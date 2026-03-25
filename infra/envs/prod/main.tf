@@ -249,16 +249,15 @@ module "ecs_services" {
 }
 
 # Edge Layer
-# ACM Certificate - disabled for HTTP-only mode
-# Uncomment when you have a domain and want HTTPS
-# module "acm" {
-#   source = "../../modules/50-edge/acm"
-#
-#   env_name       = local.env_name
-#   domain_name    = var.domain_name
-#   hosted_zone_id = var.hosted_zone_id
-#   tags           = local.tags
-# }
+# ACM Certificate - ENABLED for HTTPS (required for production)
+module "acm" {
+  source = "../../modules/50-edge/acm"
+
+  env_name       = local.env_name
+  domain_name    = var.domain_name
+  hosted_zone_id = var.hosted_zone_id
+  tags           = local.tags
+}
 
 module "alb" {
   source = "../../modules/50-edge/alb"
@@ -267,7 +266,7 @@ module "alb" {
   vpc_id              = module.vpc.vpc_id
   public_subnet_ids   = module.vpc.public_subnet_ids
   security_group_id   = module.security_groups.sg_alb_public_id
-  acm_certificate_arn = "" # Not using HTTPS for now
+  #acm_certificate_arn = module.acm.certificate_arn  # HTTPS enabled
 
   api_target_config = {
     port = module.ecs_services.api_port

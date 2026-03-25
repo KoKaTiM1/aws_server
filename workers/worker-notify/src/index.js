@@ -6,13 +6,14 @@
  */
 
 require('dotenv').config();
-const AWS = require('aws-sdk');
+const { SQSClient, ReceiveMessageCommand, DeleteMessageCommand } = require('@aws-sdk/client-sqs');
+const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
 const admin = require('firebase-admin');
 const { Pool } = require('pg');
 
-// AWS Configuration
-const sqs = new AWS.SQS({ region: process.env.AWS_REGION || 'us-east-1' });
-const secretsManager = new AWS.SecretsManager({ region: process.env.AWS_REGION || 'us-east-1' });
+// AWS Configuration (SDK v3)
+const sqs = new SQSClient({ region: process.env.AWS_REGION || 'us-east-1' });
+const secretsManager = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 // Environment variables
 const QUEUE_URL = process.env.SQS_QUEUE_URL_VERIFIED_ANIMALS;
@@ -309,7 +310,7 @@ async function pollQueue() {
       MessageAttributeNames: ['All']
     };
 
-    const data = await sqs.receiveMessage(params).promise();
+    const data = await sqs.send(new ReceiveMessageCommand(params));
 
     if (!data.Messages || data.Messages.length === 0) {
       return 0;
@@ -320,15 +321,15 @@ async function pollQueue() {
     for (const message of data.Messages) {
       try {
         const detection = JSON.parse(message.Body);
-        
+
         // Process the detection
         await processVerifiedAnimal(detection);
 
         // Delete message from queue
-        await sqs.deleteMessage({
+        await sqs.send(new DeleteMessageCommand({
           QueueUrl: QUEUE_URL,
           ReceiptHandle: message.ReceiptHandle
-        }).promise();
+        }));
 
         console.log(`✅ Message processed and deleted`);
 
