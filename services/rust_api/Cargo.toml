@@ -1,0 +1,48 @@
+[package]
+name = "rust_api"
+default-run = "rust_api"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+actix = "0.13.5"
+actix-files = "0.6.2"
+actix-http = "3.11.0"
+actix-multipart = "0.7.2"
+actix-web = { version = "4.11.0", features = ["rustls-0_23"] }
+actix-web-actors = "4.3.1"
+actix-web-httpauth = "0.8.2"
+actix-cors = "0.6.5"
+aws-config = "1.8.3"
+aws-sdk-s3 = "1.100.0"
+base64 = "0.22"
+chrono = { version = "0.4", features = ["serde"] }
+csv = "1.3"
+dashmap = "6.1.0"
+dotenvy = "0.15.7"
+futures-util = "0.3.31"
+geo = "0.30.0"
+jsonwebtoken = "9.3.1"
+lazy_static = "1.4"
+reqwest = { version = "0.12.22", features = ["json", "rustls-tls"], default-features = false }
+rustls = "0.23.29"
+rustls-pemfile = "2.2.0"
+sanitize-filename = "0.6.0"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0"
+sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "chrono"] }
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
+uuid = { version = "1.17.0", features = ["v4", "serde"] }
+validator = { version = "0.20.0", features = ["derive"] }
+zip = { version = "2.2.0", default-features = false, features = ["deflate"] }
+openssl = "0.10"
+redis = { version = "0.24", features = ["aio", "tokio-comp"] }
+rumqttc = { version = "0.24", features = ["use-rustls"] }   # async MQTT client for Tokio
+
+[[bin]]
+name = "mqtt_monitor"
+path = "src/services/mqtt_monitor.rs"
+
