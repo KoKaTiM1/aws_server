@@ -24,6 +24,9 @@ jobs:
       worker_ingest_image: ${{ steps.image.outputs.worker_ingest_image }}
       worker_verify_image: ${{ steps.image.outputs.worker_verify_image }}
       worker_notify_image: ${{ steps.image.outputs.worker_notify_image }}
+      rust_api_image: ${{ steps.image.outputs.rust_api_image }}
+      mqtt_monitor_image: ${{ steps.image.outputs.mqtt_monitor_image }}
+      dashboard_image: ${{ steps.image.outputs.dashboard_image }}
 
     steps:
       - name: Checkout code
@@ -32,7 +35,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/prod-github-actions
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID_A }}:role/oidc-provider
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
@@ -77,6 +80,34 @@ jobs:
             ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-notify:latest
             ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-notify:${{ github.sha }}
 
+      - name: Build and push rust_api image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/rust_api
+          dockerfile: ./services/rust_api/config/docker/dockerfile
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-rust-api:latest
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-rust-api:${{ github.sha }}
+
+      - name: Build and push mqtt-monitor image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/mqtt-monitor
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-mqtt-monitor:latest
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-mqtt-monitor:${{ github.sha }}
+
+      - name: Build and push dashboard image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./workers/dashboard
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-dashboard:latest
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-dashboard:${{ github.sha }}
+
       - name: Output image URIs
         id: image
         run: |
@@ -85,6 +116,9 @@ jobs:
           echo "worker_ingest_image=${REGISTRY}/eyedar-worker-ingest:${{ github.sha }}" >> $GITHUB_OUTPUT
           echo "worker_verify_image=${REGISTRY}/eyedar-worker-verify:${{ github.sha }}" >> $GITHUB_OUTPUT
           echo "worker_notify_image=${REGISTRY}/eyedar-worker-notify:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "rust_api_image=${REGISTRY}/eyedar-rust-api:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "mqtt_monitor_image=${REGISTRY}/eyedar-mqtt-monitor:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "dashboard_image=${REGISTRY}/eyedar-dashboard:${{ github.sha }}" >> $GITHUB_OUTPUT
 
   deploy:
     needs: build
@@ -98,7 +132,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/prod-github-actions
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID_A }}:role/oidc-provider
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Update ECS services
@@ -131,9 +165,30 @@ jobs:
             --force-new-deployment \
             --region ${{ env.AWS_REGION }}
 
+          # Update rust_api service
+          aws ecs update-service \
+            --cluster eyedar-prod \
+            --service eyedar-prod-rust-api \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }} 2>/dev/null || true
+
+          # Update mqtt-monitor service (optional)
+          aws ecs update-service \
+            --cluster eyedar-prod \
+            --service eyedar-prod-mqtt-monitor \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }} 2>/dev/null || true
+
+          # Update dashboard service (optional)
+          aws ecs update-service \
+            --cluster eyedar-prod \
+            --service eyedar-prod-dashboard \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }} 2>/dev/null || true
+
       - name: Wait for deployments
         run: |
-          for service in eyedar-prod-api eyedar-prod-worker-ingest eyedar-prod-worker-notify; do
+          for service in eyedar-prod-api eyedar-prod-worker-ingest eyedar-prod-worker-notify eyedar-prod-rust-api; do
             echo "Waiting for $service to stabilize..."
             aws ecs wait services-stable \
               --cluster eyedar-prod \
