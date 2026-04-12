@@ -57,3 +57,17 @@ output "dashboard_port" {
   description = "Port number for dashboard service"
   value       = 3000
 }
+
+output "worker_notify_service_name" {
+  description = "Name of the worker-notify ECS service"
+  value       = try(aws_ecs_service.worker_notify[0].name, null)
+}
+
+output "worker_notify_task_definition_arn" {
+  description = "ARN of the worker-notify task definition"
+  value       = aws_ecs_task_definition.worker_notify.arn
+}
+
+# Optional services - commented out until ECS services are fully defined
+# output "rust_api_service_name" { ... }
+# output "mqtt_monitor_service_name" { ... }

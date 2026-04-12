@@ -72,3 +72,7 @@ output "dashboard_name" {
   description = "Name of the CloudWatch dashboard"
   value       = aws_cloudwatch_dashboard.main.dashboard_name
 }
+
+# Optional service log groups - commented out until services are fully defined
+# output "log_group_rust_api_name" { ... }
+# output "log_group_mqtt_monitor_name" { ... }

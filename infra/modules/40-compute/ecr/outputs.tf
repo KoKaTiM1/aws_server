@@ -47,3 +47,23 @@ output "ecr_repo_arn_worker_notify" {
   description = "ARN of the worker-notify ECR repository"
   value       = aws_ecr_repository.worker_notify.arn
 }
+
+output "ecr_repo_url_rust_api" {
+  description = "URL of the rust-api ECR repository"
+  value       = aws_ecr_repository.rust_api.repository_url
+}
+
+output "ecr_repo_arn_rust_api" {
+  description = "ARN of the rust-api ECR repository"
+  value       = aws_ecr_repository.rust_api.arn
+}
+
+output "ecr_repo_url_mqtt_monitor" {
+  description = "URL of the mqtt-monitor ECR repository"
+  value       = aws_ecr_repository.mqtt_monitor.repository_url
+}
+
+output "ecr_repo_arn_mqtt_monitor" {
+  description = "ARN of the mqtt-monitor ECR repository"
+  value       = aws_ecr_repository.mqtt_monitor.arn
+}

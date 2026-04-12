@@ -37,6 +37,16 @@ output "sqs_queue_urls" {
   value = {
     detection_created = module.sqs.queue_url_detection_created
     verify_requested  = module.sqs.queue_url_verify_requested
+    verified_animals  = module.sqs.queue_url_verified_animals
+  }
+}
+
+output "sqs_dlq_urls" {
+  description = "SQS Dead Letter Queue URLs"
+  value = {
+    detection_created = module.sqs.dlq_url_detection_created
+    verify_requested  = module.sqs.dlq_url_verify_requested
+    verified_animals  = module.sqs.dlq_url_verified_animals
   }
 }
 
@@ -47,7 +57,10 @@ output "ecr_repository_urls" {
     api            = module.ecr.ecr_repo_url_api
     worker_ingest  = module.ecr.ecr_repo_url_worker_ingest
     worker_verify  = module.ecr.ecr_repo_url_worker_verify
+    worker_notify  = module.ecr.ecr_repo_url_worker_notify
     dashboard      = module.ecr.ecr_repo_url_dashboard
+    rust_api       = module.ecr.ecr_repo_url_rust_api
+    mqtt_monitor   = module.ecr.ecr_repo_url_mqtt_monitor
   }
 }
 
@@ -62,6 +75,7 @@ output "ecs_service_names" {
     api            = module.ecs_services.api_service_name
     worker_ingest  = module.ecs_services.worker_ingest_service_name
     worker_verify  = module.ecs_services.worker_verify_service_name
+    worker_notify  = module.ecs_services.worker_notify_service_name
     dashboard      = module.ecs_services.dashboard_service_name
   }
 }
@@ -96,6 +110,7 @@ output "cloudwatch_log_groups" {
     api            = module.cloudwatch.log_group_api_name
     worker_ingest  = module.cloudwatch.log_group_worker_ingest_name
     worker_verify  = module.cloudwatch.log_group_worker_verify_name
+    worker_notify  = module.cloudwatch.log_group_worker_notify_name
     dashboard      = module.cloudwatch.log_group_dashboard_name
   }
 }
