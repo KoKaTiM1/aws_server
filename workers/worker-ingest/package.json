@@ -1,0 +1,21 @@
+{
+  "name": "worker-ingest",
+  "version": "1.0.0",
+  "description": "SQS consumer for detection ingestion into RDS",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.500.0",
+    "pg": "^8.11.3",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

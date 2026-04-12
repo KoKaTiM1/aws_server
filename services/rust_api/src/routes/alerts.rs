@@ -6,12 +6,14 @@ use std::os::unix::fs::PermissionsExt;
 use std::fs::OpenOptions;
 use tokio::fs;
 use sqlx::PgPool;
+use aws_sdk_s3::Client as S3Client;
+use aws_sdk_sqs::Client as SqsClient;
 use crate::models::alert::AlertPayload;
 use crate::models::dashboard::{AlertSeverity, DeviceActivity, ActivityType, DeviceHealth};
 use crate::models::hardware::HardwareStatus;
 use crate::routes::dashboard::{log_alert, log_device_activity, register_device, update_device_status};
 use crate::routes::dashboard::{register_device_persistent, log_alert_persistent, log_device_activity_persistent};
-use crate::services::{alert_service::AlertService, image_service::ImageService, device_service::DeviceService};
+use crate::services::{alert_service::AlertService, image_service::ImageService, device_service::DeviceService, sqs_service::SqsService};
 use std::time::SystemTime;
 use serde::{Deserialize, Serialize};
 
@@ -178,6 +180,10 @@ pub async fn post_alert(
     req: HttpRequest,
     body: web::Bytes,
     pool: web::Data<PgPool>,
+    s3_client: web::Data<S3Client>,
+    s3_bucket: web::Data<String>,
+    sqs_client: web::Data<SqsClient>,
+    queue_url_ingest: web::Data<String>,
 ) -> Result<HttpResponse, Error> {
     let content_type = req
         .headers()
@@ -190,7 +196,7 @@ pub async fn post_alert(
         return Err(actix_web::error::ErrorBadRequest("Use /alerts/multipart for file uploads"));
     } else {
         // Handle JSON payload (potentially with base64 image)
-        handle_json_alert(req, body, pool).await
+        handle_json_alert(req, body, pool, s3_client.as_ref(), s3_bucket.as_ref(), sqs_client.as_ref(), queue_url_ingest.as_ref()).await
     }
 }
 
@@ -207,6 +213,10 @@ async fn handle_json_alert(
     _req: HttpRequest,
     body: web::Bytes,
     pool: web::Data<PgPool>,
+    s3_client: &S3Client,
+    s3_bucket: &str,
+    sqs_client: &SqsClient,
+    queue_url_ingest: &str,
 ) -> Result<HttpResponse, Error> {
     println!(" handle_json_alret called, body len={}", body.len(),); 
     // Try to parse as DetectionAlert (motion/object detection with image)
@@ -230,9 +240,11 @@ async fn handle_json_alert(
                 let saved = save_raw_image(
                     raw_bytes.clone(),
                     detection.image_format.clone(),
-                    device_id
+                    device_id,
+                    s3_client,
+                    s3_bucket
                 ).await?;
-                
+
                 if let Some(ref path) = saved {
                     println!("📸 Saved detection primary raw image (single field): {}", path);
                     image_path = Some(path.clone());
@@ -246,9 +258,11 @@ async fn handle_json_alert(
                 let saved = save_base64_image(
                     single_b64.clone(),
                     detection.image_format.clone(),
-                    device_id
+                    device_id,
+                    s3_client,
+                    s3_bucket
                 ).await?;
-                
+
                 if let Some(ref path) = saved {
                     println!("📸 Saved detection primary base64 image (single field): {}", path);
                     image_path = Some(path.clone());
@@ -266,37 +280,41 @@ async fn handle_json_alert(
                 // Per-image format, falling back to top-level image_format if missing
                 let per_image_format = img.image_format.clone()
                     .or_else(|| detection.image_format.clone());
-                
+
                 let extra_saved = if let Some(raw_bytes) = img.image_raw.as_ref() {
                     if raw_bytes.is_empty() {
                         println!("⚠️ Skipping empty image_raw in images[{}] from device {}", idx, device_id);
                         continue;
                     }
-                    // Save raw image
+                    // Save raw image with S3 client
                     save_raw_image(
                         raw_bytes.clone(),
                         per_image_format,
-                        device_id
+                        device_id,
+                        s3_client,
+                        s3_bucket
                     ).await?
                 } else if let Some(b64_str) = img.image_base64.as_ref() {
                     if b64_str.is_empty() {
                         println!("⚠️ Skipping empty image_base64 in images[{}] from device {}", idx, device_id);
                         continue;
                     }
-                    // Save base64 image
+                    // Save base64 image with S3 client
                     save_base64_image(
                         b64_str.clone(),
                         per_image_format,
-                        device_id
+                        device_id,
+                        s3_client,
+                        s3_bucket
                     ).await?
                 } else {
                     println!("⚠️ Skipping image[{}] with no data from device {}", idx, device_id);
                     continue;
                 };
-                
+
                 if let Some(ref extra_path) = extra_saved {
                     println!("📸 Saved detection extra image [{}]: {}", idx, extra_path);
-                    
+
                     // If no primary path was set yet (no single image, or failed),
                     // use the first successful extra image as the primary one
                     if image_path.is_none() {
@@ -334,7 +352,30 @@ async fn handle_json_alert(
         ) {
             println!("⚠️ Failed to append alerts_dataset.csv: {}", e);
         }
-        
+
+        // Publish detection_created event to SQS for processing pipeline
+        if !queue_url_ingest.is_empty() {
+            let s3_images = if let Some(ref img_path) = image_path {
+                vec![img_path.clone()]
+            } else {
+                vec![]
+            };
+
+            if let Err(e) = SqsService::publish_detection_created(
+                sqs_client,
+                queue_url_ingest,
+                device_id,
+                s3_images,
+                &detection.message,
+                &detection.timestamp,
+                detection.severity.as_deref().unwrap_or("unknown"),
+                detection.sensor_source.as_deref(),
+            ).await {
+                eprintln!("⚠️ Failed to publish detection_created to SQS: {}", e);
+                // Don't fail the request, just log the warning
+            }
+        }
+
         return Ok(HttpResponse::Accepted().json(serde_json::json!({
             "status": "detection_received",
             "message": detection.message,
@@ -372,18 +413,22 @@ async fn save_base64_image(
     base64_data: String,
     image_format: Option<String>,
     device_id: u32,
+    s3_client: &S3Client,
+    s3_bucket: &str,
 ) -> Result<Option<String>, Error> {
-    let filename = ImageService::save_base64_image(base64_data, image_format, device_id).await?;
-    Ok(Some(filename))
+    let s3_uri = ImageService::save_base64_image(base64_data, image_format, device_id, s3_client, s3_bucket).await?;
+    Ok(Some(s3_uri))
 }
 
 async fn save_raw_image(
     image_bytes: Vec<u8>,
     image_format: Option<String>,
     device_id: u32,
+    s3_client: &S3Client,
+    s3_bucket: &str,
 ) -> Result<Option<String>, Error> {
-    let filename = ImageService::save_raw_image(image_bytes, image_format, device_id).await?;
-    Ok(Some(filename))
+    let s3_uri = ImageService::save_raw_image(image_bytes, image_format, device_id, s3_client, s3_bucket).await?;
+    Ok(Some(s3_uri))
 }
 
 async fn handle_multipart_alert(

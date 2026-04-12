@@ -6,6 +6,8 @@ use actix_files;
 use futures_util::future;
 use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_s3::Client as S3Client;
+use aws_sdk_sqs::Client as SqsClient;
+use aws_sdk_secretsmanager::Client as SecretsClient;
 use rust_api::handlers::{
     hardware::{register_hardware, sensor_data},
     health::health_check,
@@ -126,32 +128,39 @@ async fn main() -> std::io::Result<()> {
     }
 
     let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
-    let s3_endpoint = env::var("S3_ENDPOINT").unwrap_or_else(|_| "http://minio:9000".to_string());
-    println!("S3 Endpoint: {s3_endpoint}");
-
     let shared_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
         .region(region_provider)
         .load()
         .await;
 
-    let s3_config = aws_sdk_s3::config::Builder::from(&shared_config)
-        .endpoint_url(&s3_endpoint)
-        .force_path_style(true)
-        .build();
+    // Extract region for logging and dynamic configuration
+    let region = shared_config
+        .region()
+        .map(|r| r.as_ref())
+        .unwrap_or("us-east-1");
+    println!("🌍 AWS Region: {}", region);
 
-    let s3_client = S3Client::from_conf(s3_config);
+    // S3 Client (native AWS, no MinIO endpoint)
+    let s3_client = S3Client::new(&shared_config);
 
-    // Test S3 connectivity at startup
-    let bucket = env::var("S3_BUCKET").unwrap_or_else(|_| "uploads".to_string());
-    match s3_client.list_objects_v2().bucket(&bucket).send().await {
-        Ok(_) => println!("✅ S3/MinIO connection successful! Bucket '{bucket}' is accessible."),
+    // SQS Client (same region)
+    let sqs_client = SqsClient::new(&shared_config);
+
+    // Secrets Manager Client (for TLS certs and secrets)
+    let secrets_client = SecretsClient::new(&shared_config);
+
+    // Redis Client (from REDIS_ENDPOINT env var)
+    let redis_url = env::var("REDIS_ENDPOINT")
+        .unwrap_or_else(|_| "redis://localhost:6379".to_string());
+    println!("✅ Redis endpoint configured: {}", redis_url);
+
+    // Validate S3 bucket access at startup
+    let s3_bucket = env::var("S3_BUCKET").expect("S3_BUCKET must be set");
+    match s3_client.list_objects_v2().bucket(&s3_bucket).max_keys(1).send().await {
+        Ok(_) => println!("✅ AWS S3 connection successful! Bucket '{s3_bucket}' is accessible."),
         Err(e) => {
-            println!("❌ S3/MinIO connection error: {e:?}");
-            println!("Attempting to create bucket '{bucket}'...");
-            match s3_client.create_bucket().bucket(&bucket).send().await {
-                Ok(_) => println!("✅ Bucket '{bucket}' created successfully"),
-                Err(e) => println!("❌ Failed to create bucket: {e:?}"),
-            }
+            eprintln!("⚠️  S3 bucket not accessible: {e:?}");
+            eprintln!("Ensure bucket exists and IAM role has s3:GetObject, s3:PutObject permissions");
         }
     };
 
@@ -196,43 +205,60 @@ async fn main() -> std::io::Result<()> {
 
     // === 🔧 SSL Configuration (ONLY if TLS is enabled) ===
     let server_config = if tls_enabled {
-        println!("🔒 Loading TLS certificates...");
-        
-        // Debug: List files in certs directory
-        match std::fs::read_dir("certs") {
-            Ok(entries) => {
-                println!("Files in certs directory:");
-                for entry in entries.flatten() {
-                    println!("- {}", entry.path().display());
-                }
-            }
-            Err(e) => println!("Failed to list certs directory: {e}"),
-        }
-        
-        let key_file = File::open(&tls_key_path)
-            .unwrap_or_else(|_| panic!("Failed to open TLS private key file: {tls_key_path}"));
-        let cert_file = File::open(&tls_cert_path)
-            .unwrap_or_else(|_| panic!("Failed to open TLS certificate file: {tls_cert_path}"));
+        println!("🔒 Loading TLS certificates from AWS Secrets Manager...");
 
-        let mut key_reader = BufReader::new(key_file);
-        let mut cert_reader = BufReader::new(cert_file);
+        let cert_secret_name = env::var("TLS_CERT_SECRET_NAME")
+            .unwrap_or_else(|_| "eyedar-prod-tls-cert".to_string());
+        let key_secret_name = env::var("TLS_KEY_SECRET_NAME")
+            .unwrap_or_else(|_| "eyedar-prod-tls-key".to_string());
 
-        let key: PrivateKeyDer<'static> = rustls_pemfile::pkcs8_private_keys(&mut key_reader)
-            .next()
-            .unwrap()
-            .unwrap()
-            .into();
+        // Fetch certificate from Secrets Manager
+        let cert_response = secrets_client
+            .get_secret_value()
+            .secret_id(&cert_secret_name)
+            .send()
+            .await
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other,
+                format!("Failed to fetch TLS cert from Secrets Manager: {}", e)))?;
+
+        let key_response = secrets_client
+            .get_secret_value()
+            .secret_id(&key_secret_name)
+            .send()
+            .await
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other,
+                format!("Failed to fetch TLS key from Secrets Manager: {}", e)))?;
+
+        let cert_pem = cert_response.secret_string()
+            .ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "No certificate data in secret"))?
+            .to_string();
+        let key_pem = key_response.secret_string()
+            .ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "No key data in secret"))?
+            .to_string();
+
+        // Parse certificates from PEM strings
+        let mut cert_reader = std::io::Cursor::new(cert_pem);
+        let mut key_reader = std::io::Cursor::new(key_pem);
 
         let certs: Vec<CertificateDer<'static>> = rustls_pemfile::certs(&mut cert_reader)
             .collect::<Result<Vec<_>, _>>()
-            .unwrap();
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData,
+                format!("Failed to parse certificates: {}", e)))?;
+
+        let keys: Vec<PrivateKeyDer<'static>> = rustls_pemfile::pkcs8_private_keys(&mut key_reader)
+            .map(|k| k.map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData,
+                format!("Failed to parse private key: {}", e))))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let key = keys.into_iter().next()
+            .ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "No private key found"))?;
 
         let config = ServerConfig::builder()
             .with_no_client_auth()
             .with_single_cert(certs, key)
-            .unwrap();
-        
-        println!("✅ TLS certificates loaded successfully");
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
+
+        println!("✅ TLS certificates loaded from Secrets Manager successfully");
         Some(config)
     } else {
         println!("🔓 TLS disabled - running HTTP only");
@@ -308,6 +334,9 @@ async fn main() -> std::io::Result<()> {
             .wrap(RateLimiter::new(60))
             .wrap(cors)
             .app_data(web::Data::new(s3_client.clone()))
+            .app_data(web::Data::new(sqs_client.clone()))
+            .app_data(web::Data::new(s3_bucket.clone()))
+            .app_data(web::Data::new(env::var("QUEUE_URL_INGEST").unwrap_or_default()))
             .app_data(web::Data::new(yolo_service.clone()))
             .app_data(web::Data::new(review_queue.clone()))
             .app_data(web::Data::new(pool.clone()))

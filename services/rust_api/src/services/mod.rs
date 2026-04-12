@@ -14,3 +14,4 @@ pub mod circuit_breaker;
 pub mod alert_service;
 pub mod device_service;
 pub mod image_service;
+pub mod sqs_service;
