@@ -1,0 +1,12 @@
+services:  
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    ports:
+      - "3000:80"
+    networks:
+      - app_net
+    depends_on:
+      - rust_api
+    restart: unless-stopped

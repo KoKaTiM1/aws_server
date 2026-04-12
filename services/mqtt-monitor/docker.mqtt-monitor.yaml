@@ -1,0 +1,13 @@
+services:
+  mqtt-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["./mqtt_monitor"]
+    env_file:
+      - .env  # Add this line so it gets MQTT credentials
+    networks:
+      - app_net
+    depends_on:
+      - rust_api
+    restart: unless-stopped

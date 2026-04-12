@@ -24,22 +24,35 @@ CREATE INDEX idx_sensors_status ON sensors(status) WHERE status = 'active';
 -- Detections table (animal detections from sensors)
 CREATE TABLE IF NOT EXISTS detections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  sensor_id UUID REFERENCES sensors(id),
-  image_url VARCHAR(500),
-  location GEOGRAPHY(POINT, 4326) NOT NULL,
+  device_id INTEGER NOT NULL,  -- ESP32 device identifier
+  message VARCHAR(500) NOT NULL,  -- Detection description
+  severity VARCHAR(50) DEFAULT 'medium',  -- low, medium, high, critical
+  sensor_source VARCHAR(100),  -- PIR, camera, MQTT, etc.
   timestamp TIMESTAMP NOT NULL,
   verified BOOLEAN DEFAULT false,
-  animal_type VARCHAR(100),  -- deer, wild_boar, fox, etc.
   confidence FLOAT,  -- AI confidence score
-  processed_at TIMESTAMP,
-  created_at TIMESTAMP DEFAULT NOW()
+  animal_type VARCHAR(100),  -- deer, wild_boar, fox, etc.
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Indexes for detections
-CREATE INDEX idx_detections_location ON detections USING GIST(location);
+CREATE INDEX idx_detections_device ON detections(device_id);
 CREATE INDEX idx_detections_verified ON detections(verified) WHERE verified = true;
 CREATE INDEX idx_detections_timestamp ON detections(timestamp DESC);
-CREATE INDEX idx_detections_sensor ON detections(sensor_id);
+CREATE INDEX idx_detections_severity ON detections(severity);
+
+-- Detection images (multiple images per detection)
+CREATE TABLE IF NOT EXISTS detection_images (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  detection_id UUID NOT NULL REFERENCES detections(id) ON DELETE CASCADE,
+  image_url VARCHAR(500) NOT NULL,  -- S3 URL
+  image_index INTEGER,  -- 0, 1, 2 for first, second, third image
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes for detection images
+CREATE INDEX idx_detection_images_detection ON detection_images(detection_id);
 
 -- Users table (app users/drivers)
 CREATE TABLE IF NOT EXISTS users (

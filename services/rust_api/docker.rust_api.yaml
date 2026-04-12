@@ -1,0 +1,20 @@
+services:
+  rust_api:
+    build: .
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    env_file:
+      - .env
+    environment:
+      - TRUSTED_ORIGINS=http://localhost:3000,http://server-h61m-s2v-b3:3000,http://dashboard:80
+    networks:
+      - app_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./serengeti/esp_photos:/app/serengeti/esp_photos 

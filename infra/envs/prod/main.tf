@@ -249,7 +249,9 @@ module "ecs_services" {
 }
 
 # Edge Layer
-# ACM Certificate - ENABLED for HTTPS (required for production)
+# ACM Certificate - DISABLED (placeholder domain cannot be validated)
+# Uncomment when real domain is configured
+/*
 module "acm" {
   source = "../../modules/50-edge/acm"
 
@@ -258,6 +260,7 @@ module "acm" {
   hosted_zone_id = var.hosted_zone_id
   tags           = local.tags
 }
+*/
 
 module "alb" {
   source = "../../modules/50-edge/alb"
