@@ -329,7 +329,10 @@ module "deploy_policies" {
     module.ecr.ecr_repo_arn_api,
     module.ecr.ecr_repo_arn_worker_ingest,
     module.ecr.ecr_repo_arn_worker_verify,
-    module.ecr.ecr_repo_arn_dashboard
+    module.ecr.ecr_repo_arn_dashboard,
+    module.ecr.ecr_repo_arn_worker_notify,
+    module.ecr.ecr_repo_arn_rust_api,
+    module.ecr.ecr_repo_arn_mqtt_monitor
   ]
 
   ecs_cluster_arn  = module.ecs_cluster.ecs_cluster_arn
