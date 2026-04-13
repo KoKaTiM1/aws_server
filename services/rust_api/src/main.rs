@@ -346,54 +346,14 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/api/v1")
                     .configure(|cfg| {
-                        cfg.service(register_hardware);
-                        cfg.service(rust_api::handlers::hardware::esp_heartbeat);
-                        cfg.service(rust_api::handlers::hardware::recover_esp);
-                        cfg.service(rust_api::handlers::hardware::get_esp_health);
-                        cfg.service(public_api_info);
-                        cfg.service(text_api_info);
-                        cfg.service(sensor_data);
-                        cfg.service(get_token);
+                        // CRITICAL ROUTES ONLY - debugging startup crash
                         cfg.service(post_alert);
                         cfg.service(post_multipart_alert);
-                        cfg.service(post_device_health);
-                        cfg.service(register_hardware_device);
-                        cfg.service(sensor_data_device);
-                        cfg.service(device_heartbeat);
-                        cfg.service(get_dashboard);
-                        cfg.service(get_dashboard_overview);
-                        cfg.service(get_all_device_health);
-                        cfg.service(get_device_health);
-                        cfg.service(get_device_metrics_by_id);
-                        cfg.service(get_device_activity);
-                        cfg.service(get_device_photos);
-                        cfg.service(get_device_detections);
-                        cfg.service(download_detections_csv);
-                        cfg.service(download_device_detections_bundle_zip);
-                        cfg.service(download_device_photos_zip);
-                        cfg.service(control_device);
-                        cfg.service(get_alerts_endpoint);
-                        cfg.service(acknowledge_alert);
-                        cfg.service(filter_devices);
-                        cfg.service(start_camera_stream);
-                        cfg.service(stop_camera_stream);
-                        cfg.service(get_camera_status);
-                        cfg.service(restart_device);
-                        cfg.service(rust_api::routes::feedback::post_feedback);
-                        cfg.service(rust_api::routes::ping::receive_ping);
-                        cfg.route("/ws/v1/sensor-stream", web::get().to(hardware_ws));
-                        cfg.route("/ws/camera/{device_id}", web::get().to(camera_websocket));
-                        cfg.service(web::scope("/yolo").configure(create_yolo_scope));
-                        cfg.service(
-                            web::resource("/hardware/").route(web::post().to(register_hardware_trailing))
-                        );
-                        cfg.service(
-                            web::resource("/hardware/test").route(web::post().to(hardware_test_handler))
-                        );
-                        cfg.service(
-                            web::resource("/nonexistent").route(web::get().to(api_v1_nonexistent_handler))
-                        );
-                        cfg.default_service(web::to(debug_unmatched_route));
+
+                        // Temporarily disabled for debugging
+                        // cfg.service(register_hardware);
+                        // cfg.service(rust_api::handlers::hardware::esp_heartbeat);
+                        // ... other routes
                     })
             )
     };
