@@ -2,6 +2,7 @@ use actix_web::Error;
 use base64::{Engine as _, engine::general_purpose};
 use aws_sdk_s3::Client as S3Client;
 use aws_sdk_s3::primitives::ByteStream;
+use std::error::Error as StdError;
 
 pub struct ImageService;
 
@@ -49,23 +50,32 @@ impl ImageService {
 
         // Upload to S3
         let byte_stream = ByteStream::from(image_bytes);
+        println!("📤 S3 Upload (base64): bucket={}, key={}, content-type={}",
+                 s3_bucket, s3_key, Self::get_mime_type(&extension));
 
-        s3_client
+        let result = s3_client
             .put_object()
             .bucket(s3_bucket)
             .key(&s3_key)
             .body(byte_stream)
             .content_type(Self::get_mime_type(&extension))
             .send()
-            .await
-            .map_err(|e| actix_web::error::ErrorInternalServerError(
-                format!("Failed to upload image to S3: {}", e)
-            ))?;
+            .await;
 
-        // Return S3 URI for storage in database
-        let s3_uri = format!("s3://{}/{}", s3_bucket, s3_key);
-        println!("✅ Image uploaded to S3: {}", s3_uri);
-        Ok(s3_uri)
+        match result {
+            Ok(_) => {
+                let s3_uri = format!("s3://{}/{}", s3_bucket, s3_key);
+                println!("✅ Base64 image uploaded to S3: {}", s3_uri);
+                return Ok(s3_uri);
+            },
+            Err(e) => {
+                eprintln!("❌ S3 upload error: {}", e);
+                eprintln!("   Full error: {:?}", e);
+                return Err(actix_web::error::ErrorInternalServerError(
+                    format!("S3 put_object failed: {}", e)
+                ));
+            }
+        }
     }
 
     /// Save raw image bytes to S3
@@ -91,22 +101,32 @@ impl ImageService {
 
         // Upload to S3
         let byte_stream = ByteStream::from(image_bytes);
+        println!("📤 S3 Upload (raw): bucket={}, key={}, content-type={}",
+                 s3_bucket, s3_key, Self::get_mime_type(&extension));
 
-        s3_client
+        let result = s3_client
             .put_object()
             .bucket(s3_bucket)
             .key(&s3_key)
             .body(byte_stream)
             .content_type(Self::get_mime_type(&extension))
             .send()
-            .await
-            .map_err(|e| actix_web::error::ErrorInternalServerError(
-                format!("Failed to upload image to S3: {}", e)
-            ))?;
+            .await;
 
-        let s3_uri = format!("s3://{}/{}", s3_bucket, s3_key);
-        println!("✅ Raw image uploaded to S3: {}", s3_uri);
-        Ok(s3_uri)
+        match result {
+            Ok(_) => {
+                let s3_uri = format!("s3://{}/{}", s3_bucket, s3_key);
+                println!("✅ Raw image uploaded to S3: {}", s3_uri);
+                return Ok(s3_uri);
+            },
+            Err(e) => {
+                eprintln!("❌ S3 raw upload error: {}", e);
+                eprintln!("   Full error: {:?}", e);
+                return Err(actix_web::error::ErrorInternalServerError(
+                    format!("S3 raw image upload failed: {}", e)
+                ));
+            }
+        }
     }
 
     /// Validate image format
