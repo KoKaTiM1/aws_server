@@ -1,0 +1,12 @@
+C:\Users\dani0\Documents\GitHub\Startup\ServerRoadmap\CloudServer\AWS-SERVER-main\services\target\debug\deps\crc-bc5e099972656642.d: C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\lib.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\crc128.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\crc16.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\crc32.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\crc64.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\crc8.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\table.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\util.rs
+
+C:\Users\dani0\Documents\GitHub\Startup\ServerRoadmap\CloudServer\AWS-SERVER-main\services\target\debug\deps\libcrc-bc5e099972656642.rmeta: C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\lib.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\crc128.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\crc16.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\crc32.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\crc64.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\crc8.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\table.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\util.rs
+
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\lib.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\crc128.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\crc16.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\crc32.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\crc64.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\crc8.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\table.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crc-3.3.0\src\util.rs:

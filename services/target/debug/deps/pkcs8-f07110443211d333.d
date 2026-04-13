@@ -1,0 +1,10 @@
+C:\Users\dani0\Documents\GitHub\Startup\ServerRoadmap\CloudServer\AWS-SERVER-main\services\target\debug\deps\pkcs8-f07110443211d333.d: C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\lib.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\error.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\private_key_info.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\traits.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\version.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\../README.md
+
+C:\Users\dani0\Documents\GitHub\Startup\ServerRoadmap\CloudServer\AWS-SERVER-main\services\target\debug\deps\libpkcs8-f07110443211d333.rmeta: C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\lib.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\error.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\private_key_info.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\traits.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\version.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\../README.md
+
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\lib.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\error.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\private_key_info.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\traits.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\version.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs8-0.9.0\src\../README.md:

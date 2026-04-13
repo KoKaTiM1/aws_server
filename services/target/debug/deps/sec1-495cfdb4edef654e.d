@@ -1,0 +1,11 @@
+C:\Users\dani0\Documents\GitHub\Startup\ServerRoadmap\CloudServer\AWS-SERVER-main\services\target\debug\deps\sec1-495cfdb4edef654e.d: C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\lib.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\point.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\error.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\parameters.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\private_key.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\traits.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\../README.md
+
+C:\Users\dani0\Documents\GitHub\Startup\ServerRoadmap\CloudServer\AWS-SERVER-main\services\target\debug\deps\libsec1-495cfdb4edef654e.rmeta: C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\lib.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\point.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\error.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\parameters.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\private_key.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\traits.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\../README.md
+
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\lib.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\point.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\error.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\parameters.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\private_key.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\traits.rs:
+C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sec1-0.3.0\src\../README.md:
