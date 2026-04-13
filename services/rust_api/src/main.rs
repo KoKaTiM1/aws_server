@@ -283,25 +283,10 @@ async fn main() -> std::io::Result<()> {
     //     Duration::from_secs(3),
     // );
 
-    // ---- MQTT config - Remove the unused environment variables
+    // ---- MQTT config - TEMPORARILY DISABLED FOR DEBUGGING
     let hb_registry = HeartbeatRegistry::new();
 
-    let mqtt_handle = spawn_mqtt_bus(
-        create_hivemq_config(), // This will use your HiveMQ Cloud settings
-        hb_registry.clone(),
-    );
-
-    // Start the MQTT watchdog
-    spawn_watchdog_mqtt(hb_registry.clone(), mqtt_handle.clone(), Duration::from_secs(30), Duration::from_secs(10));
-
-    // Start the offline detector - marks devices as offline if not seen in 2 hours
-    // This allows for long periods between detections (quiet areas) while relying on heartbeat
-    rust_api::services::heartbeat::spawn_offline_detector(
-        pool.clone(),
-        Duration::from_secs(7200),  // 2 hours (120 min) offline threshold
-        Duration::from_secs(300),   // Check every 5 minutes
-    );
-    println!("🔍 Offline detector started (2 hour threshold, checking every 5 min)");
+    println!("⚠️  MQTT/Offline detector subsystem disabled for this deployment");
 
     // Initialize sample dashboard data for development
     rust_api::utils::sample_data::populate_sample_data();
@@ -338,10 +323,9 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(s3_bucket.clone()))
             .app_data(web::Data::new(env::var("QUEUE_URL_INGEST").unwrap_or_default()))
             .app_data(web::Data::new(yolo_service.clone()))
-            // .app_data(web::Data::new(review_queue.clone()))
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(hb_registry.clone()))
-            .app_data(web::Data::new(mqtt_handle.clone())) // Add MQTT handle to app data
+            // .app_data(web::Data::new(mqtt_handle.clone()))
             .service(health_check)
             .service(
                 actix_files::Files::new("/dashboard", "static/")
