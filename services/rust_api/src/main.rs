@@ -290,7 +290,9 @@ async fn main() -> std::io::Result<()> {
     println!("⚠️  MQTT/Offline detector subsystem disabled for this deployment");
 
     // Initialize sample dashboard data for development
-    rust_api::utils::sample_data::populate_sample_data();
+    // DISABLED FOR DEBUGGING - this was loading potentially corrupted state
+    // rust_api::utils::sample_data::populate_sample_data();
+    println!("⚠️  Sample data population disabled");
 
     // Load persistent data from database into memory (DISABLED FOR NOW - blocking startup)
     // rust_api::routes::dashboard::load_from_database(&pool).await;
