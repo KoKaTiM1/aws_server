@@ -49,9 +49,9 @@ variable "enable_s3_endpoint" {
 }
 
 variable "enable_interface_endpoints" {
-  description = "Enable interface endpoints (logs, ecr, secrets) - can be expensive"
+  description = "Enable interface endpoints (logs, ecr, secrets) - required for private ECS tasks"
   type        = bool
-  default     = false
+  default     = true
 }
 
 # Domain Configuration
