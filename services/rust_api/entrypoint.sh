@@ -1,6 +1,6 @@
 #!/bin/bash
 set -x  # Enable debug output
-set -e
+# set -e  # REMOVED: Don't exit on error so we can debug
 
 echo "🚀 Rust API Starting..."
 echo "Current user: $(whoami)"
@@ -26,10 +26,16 @@ echo "DB_PASSWORD=${DB_PASSWORD:0:10}***"
 # Build DATABASE_URL from components
 export DATABASE_URL="postgresql://${DB_USERNAME:-eyedar_admin}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 echo "✅ DATABASE_URL configured: postgresql://${DB_USERNAME:-eyedar_admin}:***@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+echo "DATABASE_URL=$DATABASE_URL"
 
 echo ""
 echo "Starting Rust API binary..."
 echo "Binary path: /app/rust_api"
 ls -la /app/rust_api
 
+echo ""
+echo "Executing binary..."
 exec /app/rust_api
+exit_code=$?
+echo "Binary exited with code: $exit_code"
+exit $exit_code
