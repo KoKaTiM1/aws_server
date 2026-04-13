@@ -1,10 +1,6 @@
 use actix_web::{post, web, HttpResponse, Error, HttpRequest};
 use actix_multipart::Multipart;
 use futures_util::TryStreamExt as _;
-use std::io::Write;
-use std::os::unix::fs::PermissionsExt;
-use std::fs::OpenOptions;
-use tokio::fs;
 use sqlx::PgPool;
 use aws_sdk_s3::Client as S3Client;
 use aws_sdk_sqs::Client as SqsClient;
@@ -16,50 +12,6 @@ use crate::routes::dashboard::{register_device_persistent, log_alert_persistent,
 use crate::services::{alert_service::AlertService, image_service::ImageService, device_service::DeviceService, sqs_service::SqsService};
 use std::time::SystemTime;
 use serde::{Deserialize, Serialize};
-
-fn csv_escape(value: &str) -> String {
-    format!("\"{}\"", value.replace('"', "\"\""))
-}
-
-fn append_detection_csv(
-    device_id: u32,
-    timestamp: &str,
-    sensor_source: Option<&str>,
-    message: &str,
-    image_path: Option<&str>,
-) -> Result<(), std::io::Error> {
-    let base_dir = "./serengeti";
-    std::fs::create_dir_all(base_dir)?;
-
-    let csv_path = format!("{}/alerts_dataset.csv", base_dir);
-    let needs_header = match std::fs::metadata(&csv_path) {
-        Ok(meta) => meta.len() == 0,
-        Err(_) => true,
-    };
-
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&csv_path)?;
-
-    if needs_header {
-        writeln!(file, "device_id,timestamp,sensor_source,message,image_path")?;
-    }
-
-    let sensor = sensor_source.unwrap_or("unknown");
-    let img = image_path.unwrap_or("");
-    writeln!(
-        file,
-        "{},{},{},{},{}",
-        device_id,
-        csv_escape(timestamp),
-        csv_escape(sensor),
-        csv_escape(message),
-        csv_escape(img),
-    )?;
-
-    Ok(())
-}
 
 /// Ensure device is registered before updating status
 /// This is needed because devices might send alerts before explicit registration
@@ -345,15 +297,16 @@ async fn handle_json_alert(
         log_alert_to_dashboard(&**pool, device_id, &detection.message, image_path.clone(), severity).await;
         println!("⚡ RETURNED FROM log_alert_to_dashboard");
 
-        if let Err(e) = append_detection_csv(
-            device_id,
-            &detection.timestamp,
-            detection.sensor_source.as_deref(),
-            &detection.message,
-            image_path.as_deref(),
-        ) {
-            println!("⚠️ Failed to append alerts_dataset.csv: {}", e);
-        }
+        // DISABLED - AWS doesn't use local CSV files
+        // if let Err(e) = append_detection_csv(
+        //     device_id,
+        //     &detection.timestamp,
+        //     detection.sensor_source.as_deref(),
+        //     &detection.message,
+        //     image_path.as_deref(),
+        // ) {
+        //     println!("⚠️ Failed to append alerts_dataset.csv: {}", e);
+        // }
 
         // Publish detection_created event to SQS for processing pipeline
         if !queue_url_ingest.is_empty() {
@@ -492,7 +445,13 @@ async fn handle_multipart_alert(
                     }
 
                     // Upload to S3
-                    let s3_uri = ImageService::save_raw_image(&image_bytes, &file_extension, device_id, s3_client, s3_bucket)
+                    let s3_uri = ImageService::save_raw_image(
+                        image_bytes,
+                        Some(file_extension),
+                        device_id,
+                        s3_client,
+                        s3_bucket
+                    )
                         .await
                         .map_err(|e| actix_web::error::ErrorInternalServerError(format!("S3 upload failed: {}", e)))?;
 

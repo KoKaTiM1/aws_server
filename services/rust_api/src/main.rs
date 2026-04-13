@@ -39,26 +39,6 @@ async fn main() -> std::io::Result<()> {
     async fn root_nonexistent_handler() -> actix_web::HttpResponse {
         actix_web::HttpResponse::Ok().body("This is a custom response for /nonexistent")
     }
-    
-    // Wrapper for POST /hardware/ (trailing slash)
-    async fn register_hardware_trailing(payload: actix_web::web::Json<HardwarePayload>) -> actix_web::HttpResponse {
-        tracing::info!(
-            "Hardware registration request (trailing slash) - ID: {}, Name: {}, Type: {:?}",
-            payload.id,
-            payload.name,
-            payload.sensor_type
-        );
-        actix_web::HttpResponse::Ok().json(serde_json::json!({
-            "status": "registered",
-            "hardware_id": payload.id,
-            "name": payload.name
-        }))
-    }
-
-    // Wrapper for POST /hardware/test
-    async fn hardware_test_handler(_payload: actix_web::web::Json<HardwarePayload>) -> actix_web::HttpResponse {
-        actix_web::HttpResponse::Ok().body("Dummy hardware test endpoint")
-    }
 
     // === Setup Crypto Provider ===
     let provider = rustls::crypto::ring::default_provider();
