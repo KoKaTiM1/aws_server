@@ -1,6 +1,6 @@
 # S3 Bucket for detection images (private)
 resource "aws_s3_bucket" "objects" {
-  bucket        = "eyedar-${var.env_name}-objects"
+  bucket        = "eyedar-${var.env_name}-objects-v2"
   force_destroy = var.force_destroy
 
   tags = merge(var.tags, {

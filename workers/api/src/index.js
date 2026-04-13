@@ -351,9 +351,13 @@ async function startup() {
     await pool.query('SELECT NOW()');
     console.log('✅ Database connected');
 
-    // Verify PostGIS is available
-    const { rows } = await pool.query('SELECT PostGIS_Version()');
-    console.log(`✅ PostGIS version: ${rows[0].postgis_version}`);
+    // Verify PostGIS is available (optional)
+    try {
+      const { rows } = await pool.query('SELECT PostGIS_Version()');
+      console.log(`✅ PostGIS version: ${rows[0].postgis_version}`);
+    } catch (pgErr) {
+      console.warn('⚠️ PostGIS not available - geospatial queries will not work:', pgErr.message);
+    }
 
     // Start server
     app.listen(PORT, '0.0.0.0', () => {

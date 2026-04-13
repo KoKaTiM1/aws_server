@@ -68,6 +68,25 @@ output "worker_notify_task_definition_arn" {
   value       = aws_ecs_task_definition.worker_notify.arn
 }
 
+output "rust_api_service_name" {
+  description = "Name of the Rust API ECS service (if enabled)"
+  value       = var.rust_api_desired_count > 0 ? aws_ecs_service.rust_api[0].name : null
+}
+
+output "rust_api_service_arn" {
+  description = "ARN of the Rust API ECS service (if enabled)"
+  value       = var.rust_api_desired_count > 0 ? aws_ecs_service.rust_api[0].id : null
+}
+
+output "rust_api_task_definition_arn" {
+  description = "ARN of the Rust API task definition"
+  value       = aws_ecs_task_definition.rust_api.arn
+}
+
+output "rust_api_port" {
+  description = "Port number for Rust API service"
+  value       = 8080
+}
+
 # Optional services - commented out until ECS services are fully defined
-# output "rust_api_service_name" { ... }
 # output "mqtt_monitor_service_name" { ... }

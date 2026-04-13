@@ -44,7 +44,7 @@ openssl = "0.10"
 redis = { version = "0.24", features = ["aio", "tokio-comp"] }
 rumqttc = { version = "0.24", features = ["use-rustls"] }   # async MQTT client for Tokio
 
-[[bin]]
-name = "mqtt_monitor"
-path = "src/services/mqtt_monitor.rs"
+# [[bin]]
+# name = "mqtt_monitor"
+# path = "src/services/mqtt_monitor.rs"
 

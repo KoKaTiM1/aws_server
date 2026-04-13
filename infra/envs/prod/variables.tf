@@ -84,6 +84,12 @@ variable "rds_multi_az" {
   default     = false
 }
 
+variable "deletion_protection" {
+  description = "Enable deletion protection for RDS"
+  type        = bool
+  default     = false
+}
+
 # Redis Configuration
 variable "redis_node_type" {
   description = "Redis node type"
@@ -128,6 +134,12 @@ variable "image_tag_dashboard" {
   default     = "latest"
 }
 
+variable "image_tag_rust_api" {
+  description = "Docker image tag for Rust API service - CI/CD should override with git SHA"
+  type        = string
+  default     = "latest"
+}
+
 variable "api_desired_count" {
   description = "Desired count of API tasks"
   type        = number
@@ -154,6 +166,12 @@ variable "worker_notify_desired_count" {
 
 variable "dashboard_desired_count" {
   description = "Desired count of dashboard tasks (0 to disable)"
+  type        = number
+  default     = 1
+}
+
+variable "rust_api_desired_count" {
+  description = "Desired count of Rust API tasks"
   type        = number
   default     = 1
 }

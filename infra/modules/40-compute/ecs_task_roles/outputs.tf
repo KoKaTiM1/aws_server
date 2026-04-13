@@ -8,6 +8,11 @@ output "task_role_api_arn" {
   value       = aws_iam_role.api.arn
 }
 
+output "task_role_rust_api_arn" {
+  description = "ARN of the Rust API task role"
+  value       = aws_iam_role.rust_api.arn
+}
+
 output "task_role_worker_ingest_arn" {
   description = "ARN of the worker-ingest task role"
   value       = aws_iam_role.worker_ingest.arn

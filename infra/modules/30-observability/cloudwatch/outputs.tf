@@ -48,6 +48,16 @@ output "log_group_worker_notify_arn" {
   value       = aws_cloudwatch_log_group.worker_notify.arn
 }
 
+output "log_group_rust_api_name" {
+  description = "Name of the Rust API log group"
+  value       = aws_cloudwatch_log_group.rust_api.name
+}
+
+output "log_group_rust_api_arn" {
+  description = "ARN of the Rust API log group"
+  value       = aws_cloudwatch_log_group.rust_api.arn
+}
+
 output "log_group_scheduler_name" {
   description = "Name of the scheduler log group"
   value       = aws_cloudwatch_log_group.scheduler.name

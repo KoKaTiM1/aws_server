@@ -195,7 +195,9 @@ async fn main() -> std::io::Result<()> {
             Err(e) => println!("❌ Failed to create review queue bucket: {e:?}"),
         }
     }
-};
+    };
+    // Using AWS S3 directly (no MinIO for AWS deployment)
+    let s3_endpoint = env::var("S3_ENDPOINT").unwrap_or_else(|_| "s3.amazonaws.com".to_string());
     let review_minio = MinioClient::new(&s3_endpoint, review_bucket)
         .await
         .map_err(|e| std::io::Error::other(e.to_string()))?;
@@ -246,9 +248,8 @@ async fn main() -> std::io::Result<()> {
                 format!("Failed to parse certificates: {}", e)))?;
 
         let keys: Vec<PrivateKeyDer<'static>> = rustls_pemfile::pkcs8_private_keys(&mut key_reader)
-            .map(|k| k.map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData,
-                format!("Failed to parse private key: {}", e))))
-            .collect::<Result<Vec<_>, _>>()?;
+            .map(|k| k.map(|key| PrivateKeyDer::Pkcs8(key)))
+            .collect::<Result<Vec<_>, std::io::Error>>()?;
 
         let key = keys.into_iter().next()
             .ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "No private key found"))?;

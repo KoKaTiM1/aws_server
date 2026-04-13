@@ -191,6 +191,7 @@ module "ecs_services" {
 
   task_role_arns = {
     api            = module.ecs_task_roles.task_role_api_arn
+    rust_api       = module.ecs_task_roles.task_role_rust_api_arn
     worker_ingest  = module.ecs_task_roles.task_role_worker_ingest_arn
     worker_verify  = module.ecs_task_roles.task_role_worker_verify_arn
     worker_notify  = module.ecs_task_roles.task_role_worker_notify_arn
@@ -199,6 +200,7 @@ module "ecs_services" {
 
   log_group_names = {
     api            = module.cloudwatch.log_group_api_name
+    rust_api       = module.cloudwatch.log_group_rust_api_name
     worker_ingest  = module.cloudwatch.log_group_worker_ingest_name
     worker_verify  = module.cloudwatch.log_group_worker_verify_name
     worker_notify  = module.cloudwatch.log_group_worker_notify_name
@@ -207,6 +209,7 @@ module "ecs_services" {
 
   ecr_image_urls = {
     api            = module.ecr.ecr_repo_url_api
+    rust_api       = module.ecr.ecr_repo_url_rust_api
     worker_ingest  = module.ecr.ecr_repo_url_worker_ingest
     worker_verify  = module.ecr.ecr_repo_url_worker_verify
     worker_notify  = module.ecr.ecr_repo_url_worker_notify
@@ -215,6 +218,7 @@ module "ecs_services" {
 
   image_tags = {
     api            = var.image_tag_api
+    rust_api       = var.image_tag_rust_api
     worker_ingest  = var.image_tag_worker_ingest
     worker_verify  = var.image_tag_worker_verify
     worker_notify  = var.image_tag_worker_notify
@@ -225,6 +229,8 @@ module "ecs_services" {
     rds_host                = module.rds.rds_address
     rds_port                = tostring(module.rds.rds_port)
     rds_db_name             = module.rds.rds_db_name
+    rds_user                = "eyedar_admin"
+    rds_password            = ""  # Not used - DB creds come from Secrets Manager
     redis_host              = module.redis.redis_endpoint
     redis_port              = tostring(module.redis.redis_port)
     s3_bucket_name          = module.s3_objects.s3_bucket_name
@@ -240,6 +246,7 @@ module "ecs_services" {
   }
 
   api_desired_count           = var.api_desired_count
+  rust_api_desired_count      = var.rust_api_desired_count
   worker_ingest_desired_count = var.worker_ingest_desired_count
   worker_verify_desired_count = var.worker_verify_desired_count
   worker_notify_desired_count = var.worker_notify_desired_count

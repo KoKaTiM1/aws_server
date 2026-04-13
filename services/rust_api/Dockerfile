@@ -1,22 +1,24 @@
 # Stage 1: Rust builder
-FROM rust:1.75-slim-bullseye as builder
+FROM rust:slim-bookworm AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     libssl-dev \
     build-essential \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/app
 
 # Copy Cargo files
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml ./
+RUN test -f Cargo.lock && cp Cargo.lock ./Cargo.lock || true
 
 # Create dummy main.rs for dependency caching
 RUN mkdir -p src && echo 'fn main() {}' > src/main.rs
 
 # Build dependencies for caching
-RUN cargo build --release
+RUN cargo build --release 2>/dev/null || true
 
 # Copy actual source
 COPY src ./src
@@ -25,12 +27,7 @@ COPY src ./src
 RUN touch src/main.rs && cargo build --release
 
 # Stage 2: Runtime
-FROM debian:bullseye-slim
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    libssl1.1 \
-    && rm -rf /var/lib/apt/lists/*
+FROM rust:slim-bookworm
 
 WORKDIR /app
 

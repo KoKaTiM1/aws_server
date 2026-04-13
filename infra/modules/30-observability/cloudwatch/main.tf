@@ -54,6 +54,17 @@ resource "aws_cloudwatch_log_group" "worker_notify" {
   })
 }
 
+resource "aws_cloudwatch_log_group" "rust_api" {
+  name              = "/ecs/eyedar-${var.env_name}-rust-api"
+  retention_in_days = var.log_retention_days
+  kms_key_id        = var.kms_key_arn
+
+  tags = merge(var.tags, {
+    Name    = "eyedar-${var.env_name}-rust-api-logs"
+    Service = "rust-api"
+  })
+}
+
 resource "aws_cloudwatch_log_group" "scheduler" {
   name              = "/ecs/eyedar-${var.env_name}-scheduler"
   retention_in_days = var.log_retention_days

@@ -88,7 +88,97 @@ resource "aws_ecs_service" "api" {
   }
 }
 
-# Worker Ingest Service
+# Rust API Service (Primary entry point for ESP devices)
+resource "aws_ecs_task_definition" "rust_api" {
+  family                   = "eyedar-${var.env_name}-rust-api"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = var.task_execution_role_arn
+  task_role_arn            = var.task_role_arns.rust_api
+
+  container_definitions = jsonencode([{
+    name  = "rust-api"
+    image = "${var.ecr_image_urls.rust_api}:${var.image_tags.rust_api}"
+
+    portMappings = [{
+      containerPort = 8080
+      protocol      = "tcp"
+    }]
+
+    environment = [
+      { name = "RUST_LOG", value = "info" },
+      { name = "PORT", value = "8080" },
+      { name = "DB_HOST", value = var.environment_vars.rds_host },
+      { name = "DB_PORT", value = var.environment_vars.rds_port },
+      { name = "DB_NAME", value = var.environment_vars.rds_db_name },
+      { name = "S3_BUCKET", value = var.environment_vars.s3_bucket_name },
+      { name = "S3_ENDPOINT", value = "https://s3.${data.aws_region.current.name}.amazonaws.com" },
+      { name = "REDIS_HOST", value = var.environment_vars.redis_host },
+      { name = "REDIS_PORT", value = var.environment_vars.redis_port },
+      { name = "SQS_QUEUE_URL", value = var.environment_vars.sqs_queue_url_detection },
+      { name = "AWS_REGION", value = data.aws_region.current.name }
+    ]
+
+    secrets = [
+      { name = "API_KEY", valueFrom = var.secret_arns.api_keys },
+      { name = "DB_USERNAME", valueFrom = "${var.secret_arns.db}:username::" },
+      { name = "DB_PASSWORD", valueFrom = "${var.secret_arns.db}:password::" }
+    ]
+
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = var.log_group_names.rust_api
+        "awslogs-region"        = data.aws_region.current.name
+        "awslogs-stream-prefix" = "rust-api"
+      }
+    }
+
+    healthCheck = {
+      command     = ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval    = 30
+      timeout     = 5
+      retries     = 3
+      startPeriod = 60
+    }
+  }])
+
+  tags = merge(var.tags, {
+    Name    = "eyedar-${var.env_name}-rust-api"
+    Service = "rust-api"
+  })
+}
+
+resource "aws_ecs_service" "rust_api" {
+  count           = var.rust_api_desired_count > 0 ? 1 : 0
+  name            = "eyedar-${var.env_name}-rust-api"
+  cluster         = var.ecs_cluster_arn
+  task_definition = aws_ecs_task_definition.rust_api.arn
+  desired_count   = var.rust_api_desired_count
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = var.private_subnet_ids
+    security_groups  = [var.security_group_ids.api]
+    assign_public_ip = false
+  }
+
+  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = 100
+
+  tags = merge(var.tags, {
+    Name    = "eyedar-${var.env_name}-rust-api"
+    Service = "rust-api"
+  })
+
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
+}
+
+
 resource "aws_ecs_task_definition" "worker_ingest" {
   family                   = "eyedar-${var.env_name}-worker-ingest"
   network_mode             = "awsvpc"

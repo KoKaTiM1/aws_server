@@ -126,6 +126,72 @@ resource "aws_iam_role_policy" "api" {
   })
 }
 
+# Rust API Task Role
+resource "aws_iam_role" "rust_api" {
+  name = "eyedar-${var.env_name}-rust-api-task"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ecs-tasks.amazonaws.com"
+      }
+    }]
+  })
+
+  tags = merge(var.tags, {
+    Name    = "eyedar-${var.env_name}-rust-api-task"
+    Service = "rust-api"
+  })
+}
+
+resource "aws_iam_role_policy" "rust_api" {
+  name = "rust-api-permissions"
+  role = aws_iam_role.rust_api.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject"
+        ]
+        Resource = "${var.s3_bucket_arn}/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:SendMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = var.sqs_queue_arns.detection_created
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = [
+          var.secret_arns.api_keys
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey"
+        ]
+        Resource = var.kms_key_arn
+      }
+    ]
+  })
+}
+
 # Worker Ingest Task Role
 resource "aws_iam_role" "worker_ingest" {
   name = "eyedar-${var.env_name}-worker-ingest-task"

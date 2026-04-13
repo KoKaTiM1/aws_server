@@ -1,3 +1,11 @@
+# Generate random password for initial RDS setup
+# (will be replaced with Secrets Manager value after initial apply)
+resource "random_password" "db" {
+  length              = 32
+  special             = true
+  override_special    = "!#$%&*()-_=+[]{}<>:?"
+}
+
 # DB Subnet Group
 resource "aws_db_subnet_group" "main" {
   name       = "eyedar-${var.env_name}-db-subnet-group"
@@ -49,7 +57,7 @@ resource "aws_db_instance" "main" {
 
   db_name  = "eyedar"
   username = "eyedar_admin"
-  password = data.aws_secretsmanager_secret_version.db.secret_string != null ? jsondecode(data.aws_secretsmanager_secret_version.db.secret_string)["password"] : "PLACEHOLDER"
+  password = random_password.db.result
 
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [var.security_group_id]
@@ -79,7 +87,3 @@ resource "aws_db_instance" "main" {
   }
 }
 
-# Data source to read DB secret
-data "aws_secretsmanager_secret_version" "db" {
-  secret_id = var.db_secret_arn
-}
