@@ -205,8 +205,10 @@ pub async fn post_multipart_alert(
     req: HttpRequest,
     payload: Multipart,
     pool: web::Data<PgPool>,
+    s3_client: web::Data<S3Client>,
+    s3_bucket: web::Data<String>,
 ) -> Result<HttpResponse, Error> {
-    handle_multipart_alert(req, payload, pool).await
+    handle_multipart_alert(req, payload, pool, s3_client.as_ref(), s3_bucket.as_ref()).await
 }
 
 async fn handle_json_alert(
@@ -435,14 +437,16 @@ async fn handle_multipart_alert(
     _req: HttpRequest,
     mut multipart: Multipart,
     pool: web::Data<PgPool>,
+    s3_client: &S3Client,
+    s3_bucket: &str,
 ) -> Result<HttpResponse, Error> {
     let mut alert_data: Option<AlertPayload> = None;
     let mut image_path: Option<String> = None;
     let mut device_id: u32 = 1; // Default device ID
-    
+
     while let Some(mut field) = multipart.try_next().await? {
         let content_disposition = field.content_disposition();
-        
+
         if let Some(name) = content_disposition.and_then(|cd| cd.get_name()) {
             match name {
                 "device_id" => {
@@ -464,12 +468,12 @@ async fn handle_multipart_alert(
                     while let Some(chunk) = field.try_next().await? {
                         bytes.extend_from_slice(&chunk);
                     }
-                    
+
                     alert_data = Some(serde_json::from_slice::<AlertPayload>(&bytes)
                         .map_err(|e| actix_web::error::ErrorBadRequest(format!("Invalid JSON: {}", e)))?);
                 }
                 "image" => {
-                    // Handle the alert image - save to device-specific folder
+                    // Upload image to S3 (no local filesystem)
                     let timestamp = chrono::Utc::now().timestamp_millis();
                     let file_extension = if let Some(filename) = content_disposition.and_then(|cd| cd.get_filename()) {
                         std::path::Path::new(filename)
@@ -480,42 +484,20 @@ async fn handle_multipart_alert(
                     } else {
                         "jpg".to_string()
                     };
-                    
-                    // Create device-specific directory
-                    let device_photos_dir = format!("./serengeti/esp_photos/{}", device_id);
-                    fs::create_dir_all(&device_photos_dir).await.map_err(|e| {
-                        actix_web::error::ErrorInternalServerError(format!("Failed to create device photos directory: {}", e))
-                    })?;
-                    
-                    // Set directory permissions to 777 (rwxrwxrwx) - full access
-                    if let Ok(dir_metadata) = fs::metadata(&device_photos_dir).await {
-                        let mut dir_permissions = dir_metadata.permissions();
-                        dir_permissions.set_mode(0o777);
-                        let _ = fs::set_permissions(&device_photos_dir, dir_permissions).await;
-                    }
-                    
-                    let file_path = format!("{}/alert_{}.{}", device_photos_dir, timestamp, file_extension);
-                    
-                    let file_path_clone = file_path.clone();
-                    let mut file = web::block(move || std::fs::File::create(&file_path_clone))
-                        .await
-                        .map_err(|e| actix_web::error::ErrorInternalServerError(format!("File creation error: {}", e)))??;
 
+                    // Read image bytes
+                    let mut image_bytes = Vec::new();
                     while let Some(chunk) = field.try_next().await? {
-                        file = web::block(move || file.write_all(&chunk).map(|_| file))
-                            .await
-                            .map_err(|e| actix_web::error::ErrorInternalServerError(format!("File write error: {}", e)))??;
+                        image_bytes.extend_from_slice(&chunk);
                     }
-                    
-                    // Set file permissions to 666 (rw-rw-rw-) - full read/write access
-                    if let Ok(file_metadata) = fs::metadata(&file_path).await {
-                        let mut file_permissions = file_metadata.permissions();
-                        file_permissions.set_mode(0o666);
-                        let _ = fs::set_permissions(&file_path, file_permissions).await;
-                    }
-                    
-                    image_path = Some(file_path.clone());
-                    println!("📸 Saved alert image for device {}: {}", device_id, file_path);
+
+                    // Upload to S3
+                    let s3_uri = ImageService::save_raw_image(&image_bytes, &file_extension, device_id, s3_client, s3_bucket)
+                        .await
+                        .map_err(|e| actix_web::error::ErrorInternalServerError(format!("S3 upload failed: {}", e)))?;
+
+                    image_path = s3_uri;
+                    println!("📸 Uploaded alert image to S3: {:?}", image_path);
                 }
                 _ => {
                     // Skip unknown fields

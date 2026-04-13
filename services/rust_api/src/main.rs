@@ -2,37 +2,24 @@ use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
 use actix_web::http::header;
 use actix_cors::Cors;
-use actix_files;
+// use actix_files;  // DISABLED - no local files to serve in AWS
 use futures_util::future;
 use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_s3::Client as S3Client;
 use aws_sdk_sqs::Client as SqsClient;
 use aws_sdk_secretsmanager::Client as SecretsClient;
 use rust_api::handlers::{
-    hardware::{register_hardware, sensor_data},
     health::health_check,
-    public_info::public_api_info,
-    text_info::text_api_info,
-    token::get_token,
-    ws::hardware_ws,
-    yolo_api::create_yolo_scope,
-    camera_stream::camera_websocket,
 };
-use rust_api::models::hardware::HardwarePayload;
-use rust_api::routes::dashboard::*;
-use rust_api::routes::{alerts::{post_alert, post_multipart_alert, post_device_health}, hardware::*};
-mod debug_handler;
-use debug_handler::debug_unmatched_route;
+use rust_api::routes::alerts::{post_alert, post_multipart_alert};
 use rust_api::middleware::{
-rate_limit::RateLimiter, security::SecurityHeadersMiddleware,
+    rate_limit::RateLimiter, security::SecurityHeadersMiddleware,
 };
-// use rust_api::services::heartbeat::{HeartbeatRegistry, spawn_watchdog}; // for non-MQTT watchdog 
 use std::time::Duration;
-use rust_api::services::mqtt_bus::{spawn_mqtt_bus, create_hivemq_config};
-use rust_api::services::heartbeat::{spawn_watchdog_mqtt, HeartbeatRegistry};
+use rust_api::services::heartbeat::HeartbeatRegistry;
 
 use rust_api::{
-    services::yolo_training::YoloTrainingService,
+    // services::yolo_training::YoloTrainingService,  // DISABLED - local files not in AWS
 };
 use rustls::{
     pki_types::{CertificateDer, PrivateKeyDer},
@@ -164,10 +151,12 @@ async fn main() -> std::io::Result<()> {
     };
 
     // === YOLO Service ===
-    let yolo_service = YoloTrainingService::new(
-        "logs/training.log",
-        r"serengeti/train_yolo.py",
-    );
+    // DISABLED FOR AWS - home server had local logs and model files
+    // let yolo_service = YoloTrainingService::new(
+    //     "logs/training.log",
+    //     r"serengeti/train_yolo.py",
+    // );
+    println!("⚠️  YOLO service disabled (home server local files not available in AWS)");
 
     // === Initialize Postgres Connection Pool ===
     use sqlx::postgres::PgPoolOptions;
@@ -325,20 +314,14 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(sqs_client.clone()))
             .app_data(web::Data::new(s3_bucket.clone()))
             .app_data(web::Data::new(env::var("QUEUE_URL_INGEST").unwrap_or_default()))
-            .app_data(web::Data::new(yolo_service.clone()))
+            // .app_data(web::Data::new(yolo_service.clone()))  // DISABLED - local files not in AWS
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(hb_registry.clone()))
             // .app_data(web::Data::new(mqtt_handle.clone()))
             .service(health_check)
-            .service(
-                actix_files::Files::new("/dashboard", "static/")
-                    .index_file("dashboard.html")
-                    .show_files_listing()
-            )
-            .service(
-                actix_files::Files::new("/api/v1/photos", "./serengeti/esp_photos")
-                    .show_files_listing()
-            )
+            // REMOVED - home server local file paths:
+            // .service(actix_files::Files::new("/dashboard", "static/"))
+            // .service(actix_files::Files::new("/api/v1/photos", "./serengeti/esp_photos"))
             .service(web::resource("/nonexistent").route(web::get().to(root_nonexistent_handler)))
             .service(
                 web::resource("/api/v1/health").route(web::get().to(|| async { actix_web::HttpResponse::Ok().body("✅ API v1 health OK") }))
