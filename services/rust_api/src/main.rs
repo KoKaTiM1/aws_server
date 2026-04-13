@@ -32,8 +32,7 @@ use rust_api::services::mqtt_bus::{spawn_mqtt_bus, create_hivemq_config};
 use rust_api::services::heartbeat::{spawn_watchdog_mqtt, HeartbeatRegistry};
 
 use rust_api::{
-    services::review_queue::ReviewQueueService, services::yolo_training::YoloTrainingService,
-    MinioClient,
+    services::yolo_training::YoloTrainingService,
 };
 use rustls::{
     pki_types::{CertificateDer, PrivateKeyDer},
@@ -203,34 +202,7 @@ async fn main() -> std::io::Result<()> {
 
     // === Load persistent data from database on startup ===
     println!("📊 Loading persistent data from database...");
-    // TEMPORARILY DISABLED FOR DEBUGGING
-    // rust_api::routes::dashboard::load_from_database(&pool).await;
-
-    // === Initialize MinIO client and Review Queue Service ===
-    let review_bucket = "review-queue";
-    // TEMPORARILY DISABLED FOR DEBUGGING
-    /*
-    match s3_client.list_objects_v2().bucket(review_bucket).send().await {
-    Ok(_) => println!("✅ Review queue bucket '{}' is accessible.", review_bucket),
-    Err(e) => {
-        println!("❌ Review queue bucket error: {e:?}");
-        println!("Attempting to create review queue bucket '{}'...", review_bucket);
-        match s3_client.create_bucket().bucket(review_bucket).send().await {
-            Ok(_) => println!("✅ Review queue bucket '{}' created successfully", review_bucket),
-            Err(e) => println!("❌ Failed to create review queue bucket: {e:?}"),
-        }
-    }
-    };
-    */
-    // Using AWS S3 directly (no MinIO for AWS deployment)
-    let s3_endpoint = env::var("S3_ENDPOINT").unwrap_or_else(|_| "s3.amazonaws.com".to_string());
-    let review_minio = MinioClient::new(&s3_endpoint, review_bucket)
-        .await
-        .map_err(|e| std::io::Error::other(e.to_string()))?;
-    let review_queue = ReviewQueueService::new(review_minio)
-        .await
-        .map_err(|e| std::io::Error::other(e.to_string()))?;
-
+    rust_api::routes::dashboard::load_from_database(&pool).await;
 
     // === 🔧 SSL Configuration (ONLY if TLS is enabled) ===
     let server_config = if tls_enabled {
@@ -366,7 +338,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(s3_bucket.clone()))
             .app_data(web::Data::new(env::var("QUEUE_URL_INGEST").unwrap_or_default()))
             .app_data(web::Data::new(yolo_service.clone()))
-            .app_data(web::Data::new(review_queue.clone()))
+            // .app_data(web::Data::new(review_queue.clone()))
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(hb_registry.clone()))
             .app_data(web::Data::new(mqtt_handle.clone())) // Add MQTT handle to app data

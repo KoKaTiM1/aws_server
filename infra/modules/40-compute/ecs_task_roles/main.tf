@@ -181,7 +181,8 @@ resource "aws_iam_role_policy" "rust_api" {
           "secretsmanager:GetSecretValue"
         ]
         Resource = [
-          var.secret_arns.api_keys
+          var.secret_arns.api_keys,
+          var.secret_arns.db
         ]
       },
       {
