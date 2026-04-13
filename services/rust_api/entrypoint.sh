@@ -23,8 +23,29 @@ echo "DB_PORT=$DB_PORT"
 echo "DB_NAME=$DB_NAME"
 echo "DB_PASSWORD=${DB_PASSWORD:0:10}***"
 
+# URL-encode the password to handle special characters
+# Simple bash function to URL-encode strings
+urlencode() {
+    local string="$1"
+    local strlen=${#string}
+    local encoded=""
+    local pos c o
+
+    for (( pos=0 ; pos<strlen ; pos++ )); do
+        c=${string:$pos:1}
+        case "$c" in
+            [-_.~a-zA-Z0-9] ) o="${c}" ;;
+            * ) printf -v o '%%%02x' "'$c"
+        esac
+        encoded+="${o}"
+    done
+    echo "${encoded}"
+}
+
+ENCODED_PASSWORD=$(urlencode "$DB_PASSWORD")
+
 # Build DATABASE_URL from components
-export DATABASE_URL="postgresql://${DB_USERNAME:-eyedar_admin}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+export DATABASE_URL="postgresql://${DB_USERNAME:-eyedar_admin}:${ENCODED_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 echo "✅ DATABASE_URL configured: postgresql://${DB_USERNAME:-eyedar_admin}:***@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 echo "DATABASE_URL=$DATABASE_URL"
 
