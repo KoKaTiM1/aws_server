@@ -203,10 +203,13 @@ async fn main() -> std::io::Result<()> {
 
     // === Load persistent data from database on startup ===
     println!("📊 Loading persistent data from database...");
-    rust_api::routes::dashboard::load_from_database(&pool).await;
+    // TEMPORARILY DISABLED FOR DEBUGGING
+    // rust_api::routes::dashboard::load_from_database(&pool).await;
 
     // === Initialize MinIO client and Review Queue Service ===
     let review_bucket = "review-queue";
+    // TEMPORARILY DISABLED FOR DEBUGGING
+    /*
     match s3_client.list_objects_v2().bucket(review_bucket).send().await {
     Ok(_) => println!("✅ Review queue bucket '{}' is accessible.", review_bucket),
     Err(e) => {
@@ -218,6 +221,7 @@ async fn main() -> std::io::Result<()> {
         }
     }
     };
+    */
     // Using AWS S3 directly (no MinIO for AWS deployment)
     let s3_endpoint = env::var("S3_ENDPOINT").unwrap_or_else(|_| "s3.amazonaws.com".to_string());
     let review_minio = MinioClient::new(&s3_endpoint, review_bucket)
@@ -226,6 +230,7 @@ async fn main() -> std::io::Result<()> {
     let review_queue = ReviewQueueService::new(review_minio)
         .await
         .map_err(|e| std::io::Error::other(e.to_string()))?;
+
 
     // === 🔧 SSL Configuration (ONLY if TLS is enabled) ===
     let server_config = if tls_enabled {

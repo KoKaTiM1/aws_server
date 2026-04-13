@@ -15,13 +15,13 @@ resource "aws_ecs_task_definition" "api" {
     image = "${var.ecr_image_urls.api}:${var.image_tags.api}"
 
     portMappings = [{
-      containerPort = 8080
+      containerPort = 3000
       protocol      = "tcp"
     }]
 
     environment = [
       { name = "NODE_ENV", value = var.env_name },
-      { name = "PORT", value = "8080" },
+      { name = "PORT", value = "3000" },
       { name = "DB_HOST", value = var.environment_vars.rds_host },
       { name = "DB_PORT", value = var.environment_vars.rds_port },
       { name = "DB_NAME", value = var.environment_vars.rds_db_name },
@@ -48,7 +48,7 @@ resource "aws_ecs_task_definition" "api" {
     }
 
     healthCheck = {
-      command     = ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      command     = ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
       interval    = 30
       timeout     = 5
       retries     = 3
@@ -73,12 +73,6 @@ resource "aws_ecs_service" "api" {
     subnets          = var.private_subnet_ids
     security_groups  = [var.security_group_ids.api]
     assign_public_ip = false
-  }
-
-  load_balancer {
-    target_group_arn = var.alb_target_group_arn_api
-    container_name   = "api"
-    container_port   = 8080
   }
 
   deployment_maximum_percent         = 200
