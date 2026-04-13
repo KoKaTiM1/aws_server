@@ -157,11 +157,15 @@ resource "aws_iam_role_policy" "rust_api" {
       {
         Effect = "Allow"
         Action = [
+          "s3:ListBucket",
           "s3:PutObject",
           "s3:GetObject",
           "s3:DeleteObject"
         ]
-        Resource = "${var.s3_bucket_arn}/*"
+        Resource = [
+          var.s3_bucket_arn,
+          "${var.s3_bucket_arn}/*"
+        ]
       },
       {
         Effect = "Allow"

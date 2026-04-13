@@ -245,6 +245,9 @@ module "ecs_services" {
     api_keys = module.secrets.api_keys_secret_arn
   }
 
+  alb_target_group_arn_api       = module.alb.target_group_api_arn
+  alb_target_group_arn_dashboard = module.alb.target_group_dashboard_arn
+
   api_desired_count           = var.api_desired_count
   rust_api_desired_count      = var.rust_api_desired_count
   worker_ingest_desired_count = var.worker_ingest_desired_count

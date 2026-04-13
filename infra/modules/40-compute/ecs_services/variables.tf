@@ -158,3 +158,13 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "alb_target_group_arn_api" {
+  description = "ARN of the ALB target group for API services"
+  type        = string
+}
+
+variable "alb_target_group_arn_dashboard" {
+  description = "ARN of the ALB target group for dashboard"
+  type        = string
+}

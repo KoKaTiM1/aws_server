@@ -75,6 +75,12 @@ resource "aws_ecs_service" "api" {
     assign_public_ip = false
   }
 
+  load_balancer {
+    target_group_arn = var.alb_target_group_arn_api
+    container_name   = "api"
+    container_port   = 8080
+  }
+
   deployment_maximum_percent         = 200
   deployment_minimum_healthy_percent = 100
 
@@ -117,6 +123,7 @@ resource "aws_ecs_task_definition" "rust_api" {
       { name = "S3_ENDPOINT", value = "https://s3.${data.aws_region.current.name}.amazonaws.com" },
       { name = "REDIS_HOST", value = var.environment_vars.redis_host },
       { name = "REDIS_PORT", value = var.environment_vars.redis_port },
+      { name = "REDIS_ENDPOINT", value = "redis://${var.environment_vars.redis_host}:${var.environment_vars.redis_port}" },
       { name = "SQS_QUEUE_URL", value = var.environment_vars.sqs_queue_url_detection },
       { name = "AWS_REGION", value = data.aws_region.current.name }
     ]
@@ -163,6 +170,12 @@ resource "aws_ecs_service" "rust_api" {
     subnets          = var.private_subnet_ids
     security_groups  = [var.security_group_ids.api]
     assign_public_ip = false
+  }
+
+  load_balancer {
+    target_group_arn = var.alb_target_group_arn_api
+    container_name   = "rust-api"
+    container_port   = 8080
   }
 
   deployment_maximum_percent         = 200
@@ -391,6 +404,12 @@ resource "aws_ecs_service" "dashboard" {
     subnets          = var.private_subnet_ids
     security_groups  = [var.security_group_ids.dashboard]
     assign_public_ip = false
+  }
+
+  load_balancer {
+    target_group_arn = var.alb_target_group_arn_dashboard
+    container_name   = "dashboard"
+    container_port   = 3000
   }
 
   deployment_maximum_percent         = 200
