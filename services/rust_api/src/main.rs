@@ -201,8 +201,9 @@ async fn main() -> std::io::Result<()> {
     };
 
     // === Load persistent data from database on startup ===
-    println!("📊 Loading persistent data from database...");
-    rust_api::routes::dashboard::load_from_database(&pool).await;
+    println!("📊 Skipping database load for now (temporarily disabled)");
+    // rust_api::routes::dashboard::load_from_database(&pool).await;
+
 
     // === 🔧 SSL Configuration (ONLY if TLS is enabled) ===
     let server_config = if tls_enabled {
@@ -290,9 +291,9 @@ async fn main() -> std::io::Result<()> {
 
     // Initialize sample dashboard data for development
     rust_api::utils::sample_data::populate_sample_data();
-    
-    // Load persistent data from database into memory
-    rust_api::routes::dashboard::load_from_database(&pool).await;
+
+    // Load persistent data from database into memory (DISABLED FOR NOW - blocking startup)
+    // rust_api::routes::dashboard::load_from_database(&pool).await;
 
     let app_factory = move || {
         let trusted_origins: Vec<String> = std::env::var("TRUSTED_ORIGINS")
