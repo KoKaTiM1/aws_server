@@ -173,11 +173,33 @@ async fn main() -> std::io::Result<()> {
     // === Initialize Postgres Connection Pool ===
     use sqlx::postgres::PgPoolOptions;
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&database_url)
-        .await
-        .expect("Failed to create Postgres pool");
+
+    // Retry logic for RDS connection (it may take a moment to be accessible)
+    let pool = {
+        let mut retries = 0;
+        let max_retries = 30;
+        let pool_result = loop {
+            match PgPoolOptions::new()
+                .max_connections(5)
+                .connect(&database_url)
+                .await
+            {
+                Ok(p) => {
+                    println!("✅ PostgreSQL connection pool created successfully");
+                    break Ok(p);
+                }
+                Err(e) => {
+                    retries += 1;
+                    if retries >= max_retries {
+                        break Err(format!("Failed to connect to PostgreSQL after {} attempts: {}", max_retries, e));
+                    }
+                    eprintln!("⏳ PostgreSQL connection attempt {} failed: {}. Retrying in 1s...", retries, e);
+                    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                }
+            }
+        };
+        pool_result.expect("Failed to create Postgres pool after retries")
+    };
 
     // === Load persistent data from database on startup ===
     println!("📊 Loading persistent data from database...");
