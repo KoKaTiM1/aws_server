@@ -180,11 +180,12 @@ async fn handle_json_alert(
         
         let device_id = detection.device_id;
         let mut image_path: Option<String> = None;
-        
-        // Ensure device is registered and mark as online
-        ensure_device_registered(device_id);
-        update_device_status(device_id, HardwareStatus::Online);
-        println!("✅ Device {} marked as online (alert received)", device_id);
+
+        // ⚠️ TEMPORARILY DISABLED - unsafe static state from home server dashboard
+        // Device registration now handled by RDS in worker-ingest
+        // ensure_device_registered(device_id);
+        // update_device_status(device_id, HardwareStatus::Online);
+        println!("📨 Device {} alert received (registration via RDS)", device_id);
         
         // 1) Handle the optional single/primary image (base64 or raw)
         // Try raw image first (more efficient), then fall back to base64
@@ -349,8 +350,8 @@ async fn handle_json_alert(
     let device_id = 1; // Default device ID for legacy format
     
     // Ensure device is registered and mark as online
-    ensure_device_registered(device_id);
-    update_device_status(device_id, HardwareStatus::Online);
+        // TEMP DISABLED: ensure_device_registered(device_id);
+        // TEMP DISABLED: update_device_status(device_id, HardwareStatus::Online);
     
     // Parse severity using service
     let severity = AlertService::parse_severity_from_message(&alert.message);
@@ -473,8 +474,8 @@ async fn handle_multipart_alert(
     println!("⚠ Received alert with image from device {}: {:?}", device_id, alert);
     
     // Ensure device is registered and mark as online
-    ensure_device_registered(device_id);
-    update_device_status(device_id, HardwareStatus::Online);
+        // TEMP DISABLED: ensure_device_registered(device_id);
+        // TEMP DISABLED: update_device_status(device_id, HardwareStatus::Online);
     println!("✅ Device {} marked as online (multipart alert received)", device_id);
     
     // Parse severity using service
@@ -511,8 +512,8 @@ async fn log_alert_to_dashboard(pool: &PgPool, device_id: u32, message: &str, im
     };
     
     // Update in-memory cache
-    log_alert(alert_summary.clone());
-    log_device_activity(activity.clone());
+        // TEMP DISABLED: log_alert(alert_summary.clone());
+        // TEMP DISABLED: log_device_activity(activity.clone());
     
     // Persist to database (await directly - blocking but reliable)
     println!("🔄 [DB] Starting database persistence for device {}", device_id);
@@ -554,7 +555,7 @@ async fn update_device_from_hardware_data(pool: &PgPool, device_id: u32, hardwar
     
     // Create and log hardware update activity using service
     let activity = DeviceService::create_hardware_update_activity(device_id, hardware_data);
-    log_device_activity(activity.clone());
+        // TEMP DISABLED: log_device_activity(activity.clone());
     
     // Async persist to database
     let pool_clone = pool.clone();
