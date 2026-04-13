@@ -496,7 +496,7 @@ async fn handle_multipart_alert(
                         .await
                         .map_err(|e| actix_web::error::ErrorInternalServerError(format!("S3 upload failed: {}", e)))?;
 
-                    image_path = s3_uri;
+                    image_path = Some(s3_uri);
                     println!("📸 Uploaded alert image to S3: {:?}", image_path);
                 }
                 _ => {
