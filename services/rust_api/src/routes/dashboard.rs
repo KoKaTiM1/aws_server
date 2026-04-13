@@ -1397,10 +1397,11 @@ pub async fn restart_device(
             })))
         }
         Err(e) => {
-            eprintln!("❌ Failed to send restart command: {}", e);
+            let error_msg = format!("{:?}", e);
+            eprintln!("❌ Failed to send restart command: {}", error_msg);
             Ok(HttpResponse::InternalServerError().json(json!({
                 "error": "Failed to send restart command",
-                "details": e.to_string()
+                "details": error_msg
             })))
         }
     }

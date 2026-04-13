@@ -427,7 +427,7 @@ async fn handle_multipart_alert(
                 }
                 "image" => {
                     // Upload image to S3 (no local filesystem)
-                    let timestamp = chrono::Utc::now().timestamp_millis();
+                    let _timestamp = chrono::Utc::now().timestamp_millis();
                     let file_extension = if let Some(filename) = content_disposition.and_then(|cd| cd.get_filename()) {
                         std::path::Path::new(filename)
                             .extension()

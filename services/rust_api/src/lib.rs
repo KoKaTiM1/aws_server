@@ -1,7 +1,5 @@
 pub mod auth;
 pub mod config;
-#[cfg(test)]
-// Re-export types
 
 // Declare modules
 pub mod db;

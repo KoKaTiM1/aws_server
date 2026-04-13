@@ -1,10 +1,7 @@
-use std::{collections::HashMap, net::SocketAddr, str::FromStr, sync::Arc, time::Duration};
-use tokio::{sync::RwLock, time};
+use std::{collections::HashMap, net::SocketAddr, str::FromStr, sync::Arc};
+use tokio::sync::RwLock;
 use chrono::{DateTime, Utc};
-use crate::services::mqtt_bus::MqttBusHandle;
-use crate::routes::dashboard::update_device_status;
 use crate::models::hardware::HardwareStatus;
-use sqlx::PgPool;
 
 #[derive(Clone, Debug)]
 pub struct DeviceInfo {
@@ -42,67 +39,6 @@ pub async fn upsert_device(
         device_id.to_string(),
         DeviceInfo { last_seen_utc: Utc::now(), addr },
     );
-}
-
-/// Watchdog: for devices silent > `stale_after`, publish an MQTT "ping" command.
-/// The device should publish a "pong" to tele/<device_id> which updates last_seen.
-pub fn spawn_watchdog_mqtt(
-    reg: HeartbeatRegistry,
-    bus: MqttBusHandle,
-    stale_after: Duration,
-    probe_every: Duration,
-) {
-    tokio::spawn(async move {
-        loop {
-            time::sleep(probe_every).await;
-            let snapshot = { reg.0.read().await.clone() };
-            let now = Utc::now();
-
-            for (device_id, info) in snapshot {
-                let silent = now.signed_duration_since(info.last_seen_utc).to_std().unwrap_or_default() > stale_after;
-                if !silent { continue; }
-
-                let cmd_id = now.timestamp_millis().to_string();
-                if let Err(e) = bus.ping(&device_id, &cmd_id).await {
-                    eprintln!("[watchdog] mqtt ping enqueue failed for {device_id}: {e}");
-                } else {
-                    println!("[watchdog] mqtt ping → cmd/{device_id} (cmd_id={cmd_id})");
-                }
-            }
-        }
-    });
-}
-
-/// Offline detector: periodically checks all registered devices and marks them as offline
-/// if they haven't been seen in `offline_threshold` duration.
-pub fn spawn_offline_detector(pool: PgPool, offline_threshold: Duration, check_interval: Duration) {
-    tokio::spawn(async move {
-        loop {
-            time::sleep(check_interval).await;
-            
-            // Query database for all devices
-            match crate::db::load_all_devices(&pool).await {
-                Ok(devices) => {
-                    let now = std::time::SystemTime::now();
-                    
-                    for device in devices {
-                        // Check if device is stale based on last_seen timestamp
-                        if let Ok(elapsed) = now.duration_since(device.last_seen) {
-                            if elapsed > offline_threshold && !matches!(device.status, HardwareStatus::Offline) {
-                                let seconds = elapsed.as_secs();
-                                
-                                // Update in-memory and persist to database
-                                crate::routes::dashboard::update_device_status_persistent(&pool, device.device_id, HardwareStatus::Offline).await;
-                                
-                                tracing::warn!("[offline-detector] ⚠️ Device {} marked as OFFLINE (last seen {} seconds ago)", device.device_id, seconds);
-                            }
-                        }
-                    }
-                }
-                Err(e) => eprintln!("[offline-detector] Failed to load devices: {}", e),
-            }
-        }
-    });
 }
 
 // pub fn spawn_watchdog(
