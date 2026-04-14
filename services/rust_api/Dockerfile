@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /usr/src/app
 
 # Copy Cargo files
-COPY Cargo.toml ./
-RUN test -f Cargo.lock && cp Cargo.lock ./Cargo.lock || true
+COPY services/rust_api/Cargo.toml ./
+RUN test -f services/rust_api/Cargo.lock && cp services/rust_api/Cargo.lock ./Cargo.lock || true
 
 # Create dummy main.rs for dependency caching
 RUN mkdir -p src && echo 'fn main() {}' > src/main.rs
@@ -21,7 +21,7 @@ RUN mkdir -p src && echo 'fn main() {}' > src/main.rs
 RUN cargo build --release 2>/dev/null || true
 
 # Copy actual source
-COPY src ./src
+COPY services/rust_api/src ./src
 
 # Touch main.rs to rebuild
 RUN touch src/main.rs && cargo build --release
@@ -31,15 +31,21 @@ FROM rust:slim-bookworm
 
 WORKDIR /app
 
+# Install PostgreSQL client for database migrations
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy binary from builder
 COPY --from=builder /usr/src/app/target/release/rust_api /app/
 
 # Copy entrypoint and config
-COPY entrypoint.sh /app/
+COPY services/rust_api/entrypoint.sh /app/
 RUN chmod +x /app/entrypoint.sh
 
-# Copy database migrations
-COPY config/docker/migrations /app/migrations
+# Copy database migrations from workspace root
+COPY infra/db/migrations /app/migrations
 RUN chmod -R 755 /app/migrations
 
 # Non-root user
