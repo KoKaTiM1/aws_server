@@ -21,6 +21,32 @@ echo "✅ All required env vars present"
 echo "DB_HOST=$DB_HOST"
 echo "DB_PORT=$DB_PORT"
 echo "DB_NAME=$DB_NAME"
+
+# Handle DB_PASSWORD - it might be a JSON object from Secrets Manager
+# If it looks like JSON (starts with '{'), extract the password field
+if [[ "$DB_PASSWORD" == "{"* ]]; then
+    echo "🔍 DB_PASSWORD appears to be JSON - extracting password field..."
+    # Use jq to extract password, or fall back to grep if jq is not available
+    if command -v jq &> /dev/null; then
+        EXTRACTED_PASSWORD=$(echo "$DB_PASSWORD" | jq -r '.password')
+        if [ -z "$EXTRACTED_PASSWORD" ] || [ "$EXTRACTED_PASSWORD" = "null" ]; then
+            echo "❌ Failed to extract password from JSON"
+            exit 1
+        fi
+        DB_PASSWORD="$EXTRACTED_PASSWORD"
+        echo "✅ Extracted password from JSON"
+    else
+        # Fallback: use grep to extract the password field
+        EXTRACTED_PASSWORD=$(echo "$DB_PASSWORD" | grep -o '"password":"[^"]*"' | cut -d'"' -f4)
+        if [ -z "$EXTRACTED_PASSWORD" ]; then
+            echo "❌ Failed to extract password from JSON (jq not available)"
+            exit 1
+        fi
+        DB_PASSWORD="$EXTRACTED_PASSWORD"
+        echo "✅ Extracted password from JSON using grep"
+    fi
+fi
+
 echo "DB_PASSWORD=${DB_PASSWORD:0:10}***"
 
 # URL-encode the password to handle special characters
