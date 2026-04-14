@@ -316,18 +316,18 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(hb_registry.clone()))
             // .app_data(web::Data::new(mqtt_handle.clone()))
             .service(health_check)
-            // Dashboard page redirects to dashboard.html
+            // Dashboard page redirects to dashboard/ (with trailing slash)
             .service(
                 web::resource("/dashboard").route(
                     web::get().to(|| async {
                         actix_web::HttpResponse::PermanentRedirect()
-                            .insert_header((actix_web::http::header::LOCATION, "/dashboard/dashboard.html"))
+                            .insert_header((actix_web::http::header::LOCATION, "/dashboard/"))
                             .finish()
                     })
                 )
             )
-            // Serve all static files
-            .service(actix_files::Files::new("/dashboard", "static/"))
+            // Serve all static files with index_file support
+            .service(actix_files::Files::new("/dashboard", "static/").index_file("dashboard.html"))
             .service(web::resource("/nonexistent").route(web::get().to(root_nonexistent_handler)))
             .service(
                 web::resource("/api/v1/health").route(web::get().to(|| async { actix_web::HttpResponse::Ok().body("✅ API v1 health OK") }))
