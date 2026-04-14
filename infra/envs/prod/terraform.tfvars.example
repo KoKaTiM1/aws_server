@@ -33,14 +33,16 @@ redis_num_cache_nodes = 1
 
 # ECS Service Configuration
 image_tag_api            = "latest"
+image_tag_rust_api       = "latest" # Rust-based API server (dashboard included)
 image_tag_worker_ingest  = "latest"
 image_tag_worker_verify  = "latest"
-image_tag_dashboard      = "latest"
+image_tag_worker_notify  = "latest" # Firebase notification worker
 
 api_desired_count           = 1
+rust_api_desired_count      = 1
 worker_ingest_desired_count = 1
 worker_verify_desired_count = 0 # Set to 1+ to enable ML verification worker
-dashboard_desired_count     = 1
+worker_notify_desired_count = 1 # FCM push notification worker
 
 # Observability Configuration
 log_retention_days         = 30
