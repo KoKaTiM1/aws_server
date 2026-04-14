@@ -20,9 +20,9 @@ RUN mkdir -p src && echo 'fn main() {}' > src/main.rs
 # Build dependencies for caching
 RUN cargo build --release 2>/dev/null || true
 
-# Copy actual source
+# Copy actual source and dashboard HTML for include_str! macro
 COPY services/rust_api/src ./src
-COPY services/rust_api/static ./static
+COPY workers/dashboard/dashboard.html ./workers/dashboard/dashboard.html
 
 # Touch main.rs to rebuild
 RUN touch src/main.rs && cargo build --release
@@ -48,10 +48,6 @@ RUN chmod +x /app/entrypoint.sh
 # Copy database migrations from workspace root
 COPY infra/db/migrations /app/migrations
 RUN chmod -R 755 /app/migrations
-
-# Copy static files (dashboard HTML, CSS, JS)
-COPY services/rust_api/static /app/static
-RUN chmod -R 755 /app/static
 
 # Non-root user
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app

@@ -9,6 +9,10 @@ use aws_sdk_s3::Client as S3Client;
 use aws_sdk_sqs::Client as SqsClient;
 use aws_sdk_secretsmanager::Client as SecretsClient;
 use rust_api::{S3BucketName, QueueUrlIngest};
+
+// Embed dashboard HTML directly in binary
+const DASHBOARD_HTML: &str = include_str!("../workers/dashboard/dashboard.html");
+
 use rust_api::handlers::{
     health::health_check,
 };
