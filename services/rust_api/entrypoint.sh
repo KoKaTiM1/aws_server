@@ -76,6 +76,34 @@ echo "✅ DATABASE_URL configured: postgresql://${DB_USERNAME:-eyedar_admin}:***
 echo "DATABASE_URL=$DATABASE_URL"
 
 echo ""
+echo "🔄 Running database migrations..."
+
+# Run migrations using sqlx-cli if available, otherwise use psql
+if command -v sqlx &> /dev/null; then
+    echo "📦 Using sqlx-cli for migrations..."
+    # Run sqlx migrations from /migrations directory
+    sqlx migrate run --database-url "$DATABASE_URL" --source /app/migrations 2>&1
+    if [ $? -eq 0 ]; then
+        echo "✅ Migrations completed successfully"
+    else
+        echo "⚠️ Migrations failed or already applied - continuing..."
+    fi
+elif command -v psql &> /dev/null; then
+    echo "📦 Using psql for migrations..."
+    export PGPASSWORD="$DB_PASSWORD"
+    psql -h "$DB_HOST" -p "$DB_PORT" -U "${DB_USERNAME:-eyedar_admin}" -d "$DB_NAME" \
+        -f /app/migrations/001_init_schema.sql \
+        -f /app/migrations/002_rust_api_tables.sql 2>&1
+    if [ $? -eq 0 ]; then
+        echo "✅ Migrations completed successfully"
+    else
+        echo "⚠️ Migrations may have failed - continuing..."
+    fi
+else
+    echo "⚠️ Neither sqlx nor psql available - skipping migrations"
+fi
+
+echo ""
 echo "Starting Rust API binary..."
 echo "Binary path: /app/rust_api"
 ls -la /app/rust_api

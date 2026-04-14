@@ -38,6 +38,10 @@ COPY --from=builder /usr/src/app/target/release/rust_api /app/
 COPY entrypoint.sh /app/
 RUN chmod +x /app/entrypoint.sh
 
+# Copy database migrations
+COPY config/docker/migrations /app/migrations
+RUN chmod -R 755 /app/migrations
+
 # Non-root user
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
