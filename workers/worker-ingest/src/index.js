@@ -3,7 +3,17 @@ const { Pool } = require('pg');
 const { v4: uuidv4 } = require('uuid');
 
 const sqsClient = new SQSClient({ region: process.env.AWS_REGION || 'us-east-1' });
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+// Construct connection string from environment variables
+const databaseUrl = process.env.DATABASE_URL ||
+  `postgresql://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`;
+
+const pool = new Pool({
+  connectionString: databaseUrl,
+  ssl: {
+    rejectUnauthorized: false,  // RDS uses self-signed cert
+  }
+});
 
 const QUEUE_URL_INGEST = process.env.QUEUE_URL_INGEST;
 const QUEUE_URL_VERIFY = process.env.QUEUE_URL_VERIFY;
