@@ -176,16 +176,22 @@ async function start() {
   console.log('[START] worker-ingest starting...');
   console.log(`[CONFIG] QUEUE_URL_INGEST: ${QUEUE_URL_INGEST}`);
   console.log(`[CONFIG] QUEUE_URL_VERIFY: ${QUEUE_URL_VERIFY}`);
-  console.log(`[CONFIG] DATABASE_URL: ${process.env.DATABASE_URL ? 'configured' : 'MISSING'}`);
+  console.log(`[CONFIG] DB_HOST: ${process.env.DB_HOST}`);
+  console.log(`[CONFIG] DB_PORT: ${process.env.DB_PORT}`);
+  console.log(`[CONFIG] DB_NAME: ${process.env.DB_NAME}`);
+  console.log(`[CONFIG] DB_USERNAME: ${process.env.DB_USERNAME ? 'set' : 'MISSING'}`);
+  console.log(`[CONFIG] DB_PASSWORD: ${process.env.DB_PASSWORD ? 'set' : 'MISSING'}`);
 
   // Verify database connection
   try {
+    console.log('[DB] Attempting to connect...');
     const client = await pool.connect();
     await client.query('SELECT NOW()');
     client.release();
     console.log('[DB] ✅ Connected to RDS');
   } catch (err) {
-    console.error(`[DB ERROR] ${err.message}`);
+    console.error(`[DB ERROR] Connection failed: ${err.message}`);
+    console.error(`[DB ERROR] Full Error:`, err);
     process.exit(1);
   }
 
