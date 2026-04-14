@@ -26,7 +26,6 @@ jobs:
       worker_notify_image: ${{ steps.image.outputs.worker_notify_image }}
       rust_api_image: ${{ steps.image.outputs.rust_api_image }}
       mqtt_monitor_image: ${{ steps.image.outputs.mqtt_monitor_image }}
-      dashboard_image: ${{ steps.image.outputs.dashboard_image }}
 
     steps:
       - name: Checkout code
@@ -99,15 +98,6 @@ jobs:
             ${{ steps.login-ecr.outputs.registry }}/eyedar-mqtt-monitor:latest
             ${{ steps.login-ecr.outputs.registry }}/eyedar-mqtt-monitor:${{ github.sha }}
 
-      - name: Build and push dashboard image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./workers/dashboard
-          push: ${{ github.ref == 'refs/heads/main' }}
-          tags: |
-            ${{ steps.login-ecr.outputs.registry }}/eyedar-dashboard:latest
-            ${{ steps.login-ecr.outputs.registry }}/eyedar-dashboard:${{ github.sha }}
-
       - name: Output image URIs
         id: image
         run: |
@@ -118,7 +108,6 @@ jobs:
           echo "worker_notify_image=${REGISTRY}/eyedar-worker-notify:${{ github.sha }}" >> $GITHUB_OUTPUT
           echo "rust_api_image=${REGISTRY}/eyedar-rust-api:${{ github.sha }}" >> $GITHUB_OUTPUT
           echo "mqtt_monitor_image=${REGISTRY}/eyedar-mqtt-monitor:${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "dashboard_image=${REGISTRY}/eyedar-dashboard:${{ github.sha }}" >> $GITHUB_OUTPUT
 
   deploy:
     needs: build
@@ -176,13 +165,6 @@ jobs:
           aws ecs update-service \
             --cluster eyedar-prod \
             --service eyedar-prod-mqtt-monitor \
-            --force-new-deployment \
-            --region ${{ env.AWS_REGION }} 2>/dev/null || true
-
-          # Update dashboard service (optional)
-          aws ecs update-service \
-            --cluster eyedar-prod \
-            --service eyedar-prod-dashboard \
             --force-new-deployment \
             --region ${{ env.AWS_REGION }} 2>/dev/null || true
 

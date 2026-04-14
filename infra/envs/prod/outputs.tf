@@ -58,7 +58,6 @@ output "ecr_repository_urls" {
     worker_ingest  = module.ecr.ecr_repo_url_worker_ingest
     worker_verify  = module.ecr.ecr_repo_url_worker_verify
     worker_notify  = module.ecr.ecr_repo_url_worker_notify
-    dashboard      = module.ecr.ecr_repo_url_dashboard
     rust_api       = module.ecr.ecr_repo_url_rust_api
     mqtt_monitor   = module.ecr.ecr_repo_url_mqtt_monitor
   }
@@ -76,7 +75,6 @@ output "ecs_service_names" {
     worker_ingest  = module.ecs_services.worker_ingest_service_name
     worker_verify  = module.ecs_services.worker_verify_service_name
     worker_notify  = module.ecs_services.worker_notify_service_name
-    dashboard      = module.ecs_services.dashboard_service_name
   }
 }
 
@@ -99,11 +97,6 @@ output "github_actions_role_arn" {
 }
 
 # Observability Outputs
-output "cloudwatch_dashboard_name" {
-  description = "CloudWatch dashboard name"
-  value       = module.cloudwatch.dashboard_name
-}
-
 output "cloudwatch_log_groups" {
   description = "CloudWatch log group names"
   value = {
@@ -111,7 +104,6 @@ output "cloudwatch_log_groups" {
     worker_ingest  = module.cloudwatch.log_group_worker_ingest_name
     worker_verify  = module.cloudwatch.log_group_worker_verify_name
     worker_notify  = module.cloudwatch.log_group_worker_notify_name
-    dashboard      = module.cloudwatch.log_group_dashboard_name
   }
 }
 

@@ -184,7 +184,6 @@ module "ecs_services" {
   security_group_ids = {
     api       = module.security_groups.sg_ecs_api_id
     workers   = module.security_groups.sg_ecs_workers_id
-    dashboard = module.security_groups.sg_ecs_dashboard_id
   }
 
   task_execution_role_arn = module.ecs_task_roles.task_execution_role_arn
@@ -195,7 +194,6 @@ module "ecs_services" {
     worker_ingest  = module.ecs_task_roles.task_role_worker_ingest_arn
     worker_verify  = module.ecs_task_roles.task_role_worker_verify_arn
     worker_notify  = module.ecs_task_roles.task_role_worker_notify_arn
-    dashboard      = module.ecs_task_roles.task_role_dashboard_arn
   }
 
   log_group_names = {
@@ -204,7 +202,6 @@ module "ecs_services" {
     worker_ingest  = module.cloudwatch.log_group_worker_ingest_name
     worker_verify  = module.cloudwatch.log_group_worker_verify_name
     worker_notify  = module.cloudwatch.log_group_worker_notify_name
-    dashboard      = module.cloudwatch.log_group_dashboard_name
   }
 
   ecr_image_urls = {
@@ -213,7 +210,6 @@ module "ecs_services" {
     worker_ingest  = module.ecr.ecr_repo_url_worker_ingest
     worker_verify  = module.ecr.ecr_repo_url_worker_verify
     worker_notify  = module.ecr.ecr_repo_url_worker_notify
-    dashboard      = module.ecr.ecr_repo_url_dashboard
   }
 
   image_tags = {
@@ -222,7 +218,6 @@ module "ecs_services" {
     worker_ingest  = var.image_tag_worker_ingest
     worker_verify  = var.image_tag_worker_verify
     worker_notify  = var.image_tag_worker_notify
-    dashboard      = var.image_tag_dashboard
   }
 
   environment_vars = {
@@ -246,14 +241,12 @@ module "ecs_services" {
   }
 
   alb_target_group_arn_api       = module.alb.target_group_api_arn
-  alb_target_group_arn_dashboard = module.alb.target_group_dashboard_arn
 
   api_desired_count           = var.api_desired_count
   rust_api_desired_count      = var.rust_api_desired_count
   worker_ingest_desired_count = var.worker_ingest_desired_count
   worker_verify_desired_count = var.worker_verify_desired_count
   worker_notify_desired_count = var.worker_notify_desired_count
-  dashboard_desired_count     = var.dashboard_desired_count
 
   tags = local.tags
 }
@@ -285,10 +278,6 @@ module "alb" {
     port = module.ecs_services.api_port
   }
 
-  dashboard_target_config = {
-    port = module.ecs_services.dashboard_port
-  }
-
   tags = local.tags
 }
 
@@ -318,8 +307,7 @@ module "github_oidc" {
   ecr_repository_arns = [
     module.ecr.ecr_repo_arn_api,
     module.ecr.ecr_repo_arn_worker_ingest,
-    module.ecr.ecr_repo_arn_worker_verify,
-    module.ecr.ecr_repo_arn_dashboard
+    module.ecr.ecr_repo_arn_worker_verify
   ]
 
   ecs_cluster_arn = module.ecs_cluster.ecs_cluster_arn
@@ -342,7 +330,6 @@ module "deploy_policies" {
     module.ecr.ecr_repo_arn_api,
     module.ecr.ecr_repo_arn_worker_ingest,
     module.ecr.ecr_repo_arn_worker_verify,
-    module.ecr.ecr_repo_arn_dashboard,
     module.ecr.ecr_repo_arn_worker_notify,
     module.ecr.ecr_repo_arn_rust_api,
     module.ecr.ecr_repo_arn_mqtt_monitor

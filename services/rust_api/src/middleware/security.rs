@@ -73,7 +73,7 @@ where
             );
             headers.insert(
                 HeaderName::from_static("content-security-policy"),
-                HeaderValue::from_static("default-src 'self'; img-src 'self' data:; script-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"),
+                HeaderValue::from_static("default-src 'self'; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https:; img-src 'self' data: https:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"),
             );
             headers.insert(
                 HeaderName::from_static("x-xss-protection"),

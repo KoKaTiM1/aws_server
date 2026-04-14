@@ -128,12 +128,6 @@ variable "image_tag_worker_notify" {
   default     = "latest"
 }
 
-variable "image_tag_dashboard" {
-  description = "Docker image tag for dashboard service - CI/CD should override with git SHA"
-  type        = string
-  default     = "latest"
-}
-
 variable "image_tag_rust_api" {
   description = "Docker image tag for Rust API service - CI/CD should override with git SHA"
   type        = string
@@ -160,12 +154,6 @@ variable "worker_verify_desired_count" {
 
 variable "worker_notify_desired_count" {
   description = "Desired count of notify worker tasks (0 to disable)"
-  type        = number
-  default     = 1
-}
-
-variable "dashboard_desired_count" {
-  description = "Desired count of dashboard tasks (0 to disable)"
   type        = number
   default     = 1
 }

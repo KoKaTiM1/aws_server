@@ -11,7 +11,6 @@ declare -a SERVICES=(
   "worker-ingest:./workers/worker-ingest"
   "worker-verify:./workers/worker-verify"
   "worker-notify:./workers/worker-notify"
-  "dashboard:./workers/dashboard"
   "rust_api:./services/rust_api"
   "mqtt-monitor:./services/mqtt-monitor"
 )
