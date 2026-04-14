@@ -316,9 +316,18 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(hb_registry.clone()))
             // .app_data(web::Data::new(mqtt_handle.clone()))
             .service(health_check)
-            // REMOVED - home server local file paths:
-            // .service(actix_files::Files::new("/dashboard", "static/"))
-            // .service(actix_files::Files::new("/api/v1/photos", "./serengeti/esp_photos"))
+            // Dashboard page redirects to dashboard.html
+            .service(
+                web::resource("/dashboard").route(
+                    web::get().to(|| async {
+                        actix_web::HttpResponse::PermanentRedirect()
+                            .insert_header((actix_web::http::header::LOCATION, "/dashboard/dashboard.html"))
+                            .finish()
+                    })
+                )
+            )
+            // Serve all static files
+            .service(actix_files::Files::new("/dashboard", "static/"))
             .service(web::resource("/nonexistent").route(web::get().to(root_nonexistent_handler)))
             .service(
                 web::resource("/api/v1/health").route(web::get().to(|| async { actix_web::HttpResponse::Ok().body("✅ API v1 health OK") }))

@@ -48,6 +48,10 @@ RUN chmod +x /app/entrypoint.sh
 COPY infra/db/migrations /app/migrations
 RUN chmod -R 755 /app/migrations
 
+# Copy static files (dashboard HTML, CSS, JS)
+COPY services/rust_api/static /app/static
+RUN chmod -R 755 /app/static
+
 # Non-root user
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
