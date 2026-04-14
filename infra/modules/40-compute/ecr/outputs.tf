@@ -28,16 +28,6 @@ output "ecr_repo_arn_worker_verify" {
   value       = aws_ecr_repository.worker_verify.arn
 }
 
-output "ecr_repo_url_dashboard" {
-  description = "URL of the dashboard ECR repository"
-  value       = aws_ecr_repository.dashboard.repository_url
-}
-
-output "ecr_repo_arn_dashboard" {
-  description = "ARN of the dashboard ECR repository"
-  value       = aws_ecr_repository.dashboard.arn
-}
-
 output "ecr_repo_url_worker_notify" {
   description = "URL of the worker-notify ECR repository"
   value       = aws_ecr_repository.worker_notify.repository_url

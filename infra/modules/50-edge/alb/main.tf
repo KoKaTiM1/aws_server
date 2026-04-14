@@ -49,32 +49,6 @@ resource "aws_lb_target_group" "api" {
   })
 }
 
-# Target Group for Dashboard
-resource "aws_lb_target_group" "dashboard" {
-  name        = "eyedar-${var.env_name}-dashboard-tg"
-  port        = var.dashboard_target_config.port
-  protocol    = "HTTP"
-  vpc_id      = var.vpc_id
-  target_type = "ip"
-
-  health_check {
-    enabled             = true
-    healthy_threshold   = 2
-    unhealthy_threshold = 3
-    timeout             = 5
-    interval            = 30
-    path                = "/health"
-    matcher             = "200"
-  }
-
-  deregistration_delay = 30
-
-  tags = merge(var.tags, {
-    Name    = "eyedar-${var.env_name}-dashboard-tg"
-    Service = "dashboard"
-  })
-}
-
 # HTTP Listener (direct routing - no HTTPS for now)
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
@@ -105,40 +79,6 @@ resource "aws_lb_listener_rule" "api" {
   condition {
     path_pattern {
       values = ["/api/*"]
-    }
-  }
-}
-
-# Listener Rule for Dashboard (path: /dashboard/*)
-resource "aws_lb_listener_rule" "dashboard" {
-  listener_arn = aws_lb_listener.http.arn
-  priority     = 200
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.dashboard.arn
-  }
-
-  condition {
-    path_pattern {
-      values = ["/dashboard/*"]
-    }
-  }
-}
-
-# Also route root to dashboard
-resource "aws_lb_listener_rule" "dashboard_root" {
-  listener_arn = aws_lb_listener.http.arn
-  priority     = 300
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.dashboard.arn
-  }
-
-  condition {
-    path_pattern {
-      values = ["/"]
     }
   }
 }

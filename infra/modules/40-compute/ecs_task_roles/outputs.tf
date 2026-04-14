@@ -23,11 +23,6 @@ output "task_role_worker_verify_arn" {
   value       = aws_iam_role.worker_verify.arn
 }
 
-output "task_role_dashboard_arn" {
-  description = "ARN of the dashboard task role"
-  value       = aws_iam_role.dashboard.arn
-}
-
 output "task_role_worker_notify_arn" {
   description = "ARN of the worker-notify task role"
   value       = aws_iam_role.worker_notify.arn

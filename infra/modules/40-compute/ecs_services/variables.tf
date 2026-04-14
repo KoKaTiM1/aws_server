@@ -20,7 +20,6 @@ variable "security_group_ids" {
   type = object({
     api       = string
     workers   = string
-    dashboard = string
   })
 }
 
@@ -37,7 +36,6 @@ variable "task_role_arns" {
     worker_ingest  = string
     worker_verify  = string
     worker_notify  = string
-    dashboard      = string
   })
 }
 
@@ -49,7 +47,6 @@ variable "log_group_names" {
     worker_ingest  = string
     worker_verify  = string
     worker_notify  = string
-    dashboard      = string
   })
 }
 
@@ -61,7 +58,6 @@ variable "ecr_image_urls" {
     worker_ingest  = string
     worker_verify  = string
     worker_notify  = string
-    dashboard      = string
   })
 }
 
@@ -73,7 +69,6 @@ variable "image_tags" {
     worker_ingest  = string
     worker_verify  = string
     worker_notify  = string
-    dashboard      = string
   })
   default = {
     api            = "latest"
@@ -81,7 +76,6 @@ variable "image_tags" {
     worker_ingest  = "latest"
     worker_verify  = "latest"
     worker_notify  = "latest"
-    dashboard      = "latest"
   }
 }
 
@@ -135,12 +129,6 @@ variable "worker_notify_desired_count" {
   default     = 1
 }
 
-variable "dashboard_desired_count" {
-  description = "Desired count of dashboard tasks"
-  type        = number
-  default     = 1
-}
-
 variable "rust_api_desired_count" {
   description = "Desired count of Rust API tasks"
   type        = number
@@ -161,10 +149,5 @@ variable "tags" {
 
 variable "alb_target_group_arn_api" {
   description = "ARN of the ALB target group for API services"
-  type        = string
-}
-
-variable "alb_target_group_arn_dashboard" {
-  description = "ARN of the ALB target group for dashboard"
   type        = string
 }

@@ -28,16 +28,6 @@ output "log_group_worker_verify_arn" {
   value       = aws_cloudwatch_log_group.worker_verify.arn
 }
 
-output "log_group_dashboard_name" {
-  description = "Name of the dashboard log group"
-  value       = aws_cloudwatch_log_group.dashboard.name
-}
-
-output "log_group_dashboard_arn" {
-description = "ARN of the dashboard log group"
-  value       = aws_cloudwatch_log_group.dashboard.arn
-}
-
 output "log_group_worker_notify_name" {
   description = "Name of the worker-notify log group"
   value       = aws_cloudwatch_log_group.worker_notify.name

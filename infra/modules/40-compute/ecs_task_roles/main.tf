@@ -320,55 +320,6 @@ resource "aws_iam_role_policy" "worker_verify" {
   })
 }
 
-# Dashboard Task Role
-resource "aws_iam_role" "dashboard" {
-  name = "eyedar-${var.env_name}-dashboard-task"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Principal = {
-        Service = "ecs-tasks.amazonaws.com"
-      }
-    }]
-  })
-
-  tags = merge(var.tags, {
-    Name    = "eyedar-${var.env_name}-dashboard-task"
-    Service = "dashboard"
-  })
-}
-
-resource "aws_iam_role_policy" "dashboard" {
-  name = "dashboard-permissions"
-  role = aws_iam_role.dashboard.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "secretsmanager:GetSecretValue"
-        ]
-        Resource = [
-          var.secret_arns.db,
-          var.secret_arns.api_keys
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "kms:Decrypt"
-        ]
-        Resource = var.kms_key_arn
-      }
-    ]
-  })
-}
-
 # Worker-Notify Task Role (sends FCM notifications)
 resource "aws_iam_role" "worker_notify" {
   name = "eyedar-${var.env_name}-worker-notify-task"

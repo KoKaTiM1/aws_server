@@ -131,14 +131,35 @@ YOLO verifies animal
 
 ---
 
-## Summary
+---
 
-| Item | Status |
-|------|--------|
-| Core infrastructure | ✅ Deployed |
-| Basic services running | ✅ 4 active |
-| Image upload end-to-end | ✅ Working |
-| Dashboard accessible | ✅ Yes |
-| **Next Priority** | **Phase 1: Terraform validation** |
-| **Estimated time to publish** | **12-18 hours** |
+## Issues Found During Phases (Tracking Log)
+
+### Phase 1: Terraform Destroy/Apply
+**Date Started:** 2026-04-14
+
+#### Issues Encountered:
+
+1. **Dashboard service references remained in Terraform after code cleanup**
+   - **Files affected:** 
+     - `infra/modules/40-compute/ecs_task_roles/main.tf` (lines 323-370)
+     - `infra/modules/40-compute/ecs_task_roles/outputs.tf` (lines 26-29)
+   - **Root cause:** When dashboard was consolidated into Rust API, Terraform module files weren't updated in sync
+   - **Resolution:** Removed dashboard IAM role, dashboard policy, and dashboard output from above files
+   - **Status:** ✅ FIXED - Terraform validate now passes
+   - **Lesson Learned:** When removing services, must update ALL layers: code, Docker, CI/CD, AND Terraform modules
+
+2. **Terraform state contains dashboard resources**
+   - **Finding:** `terraform plan -destroy` shows dashboard ECR repo, security group, ALB target group, ECS service, task definition, and log group still in state
+   - **Impact:** Destroying infrastructure will remove these resources (which is desired)
+   - **Note:** This is expected - the state was synced with active resources before code changes
+   - **Next step:** When running `terraform destroy`, these will be cleaned up as expected
+
+#### Remaining Tasks (Phase 1):
+- [ ] Run `terraform destroy` (approved after code cleanup)
+- [ ] Verify all resources destroyed successfully
+- [ ] Document any errors or unexpected behavior
+- [ ] Run `terraform apply` for fresh deployment
+- [ ] Capture all created resource ARNs and IDs
+- [ ] Verify RDS, S3, ECS, ALB, etc. all functional post-deploy
 

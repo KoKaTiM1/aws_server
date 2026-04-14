@@ -33,13 +33,6 @@ variable "api_target_config" {
   })
 }
 
-variable "dashboard_target_config" {
-  description = "Configuration for dashboard target"
-  type = object({
-    port = number
-  })
-}
-
 variable "enable_access_logs" {
   description = "Enable ALB access logs to S3"
   type        = bool

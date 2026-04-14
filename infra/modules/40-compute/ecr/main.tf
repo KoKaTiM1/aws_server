@@ -113,44 +113,6 @@ resource "aws_ecr_lifecycle_policy" "worker_verify" {
   })
 }
 
-# ECR Repository for Dashboard
-resource "aws_ecr_repository" "dashboard" {
-  name                 = "eyedar-${var.env_name}-dashboard"
-  image_tag_mutability = var.image_tag_mutability
-
-  image_scanning_configuration {
-    scan_on_push = var.scan_on_push
-  }
-
-  encryption_configuration {
-    encryption_type = "AES256"
-  }
-
-  tags = merge(var.tags, {
-    Name    = "eyedar-${var.env_name}-dashboard"
-    Service = "dashboard"
-  })
-}
-
-resource "aws_ecr_lifecycle_policy" "dashboard" {
-  repository = aws_ecr_repository.dashboard.name
-
-  policy = jsonencode({
-    rules = [{
-      rulePriority = 1
-      description  = "Keep last ${var.retention_count} images"
-      selection = {
-        tagStatus   = "any"
-        countType   = "imageCountMoreThan"
-        countNumber = var.retention_count
-      }
-      action = {
-        type = "expire"
-      }
-    }]
-  })
-}
-
 # ECR Repository for Worker-Notify
 resource "aws_ecr_repository" "worker_notify" {
   name                 = "eyedar-${var.env_name}-worker-notify"

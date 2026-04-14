@@ -32,17 +32,6 @@ resource "aws_cloudwatch_log_group" "worker_verify" {
   })
 }
 
-resource "aws_cloudwatch_log_group" "dashboard" {
-  name              = "/ecs/eyedar-${var.env_name}-dashboard"
-  retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn
-
-  tags = merge(var.tags, {
-    Name    = "eyedar-${var.env_name}-dashboard-logs"
-    Service = "dashboard"
-  })
-}
-
 resource "aws_cloudwatch_log_group" "worker_notify" {
   name              = "/ecs/eyedar-${var.env_name}-worker-notify"
   retention_in_days = var.log_retention_days

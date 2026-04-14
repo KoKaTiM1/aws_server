@@ -13,11 +13,6 @@ output "sg_ecs_workers_id" {
   value       = aws_security_group.ecs_workers.id
 }
 
-output "sg_ecs_dashboard_id" {
-  description = "Security group ID for ECS dashboard service"
-  value       = aws_security_group.ecs_dashboard.id
-}
-
 output "sg_rds_id" {
   description = "Security group ID for RDS database"
   value       = aws_security_group.rds.id

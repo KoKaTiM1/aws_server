@@ -38,24 +38,9 @@ output "worker_verify_task_definition_arn" {
   value       = aws_ecs_task_definition.worker_verify.arn
 }
 
-output "dashboard_service_name" {
-  description = "Name of the dashboard ECS service (if enabled)"
-  value       = var.dashboard_desired_count > 0 ? aws_ecs_service.dashboard[0].name : null
-}
-
-output "dashboard_task_definition_arn" {
-  description = "ARN of the dashboard task definition"
-  value       = aws_ecs_task_definition.dashboard.arn
-}
-
 output "api_port" {
   description = "Port number for API service"
   value       = 8080
-}
-
-output "dashboard_port" {
-  description = "Port number for dashboard service"
-  value       = 3000
 }
 
 output "worker_notify_service_name" {

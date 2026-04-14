@@ -23,11 +23,6 @@ output "target_group_api_arn" {
   value       = aws_lb_target_group.api.arn
 }
 
-output "target_group_dashboard_arn" {
-  description = "ARN of the dashboard target group"
-  value       = aws_lb_target_group.dashboard.arn
-}
-
 output "http_listener_arn" {
   description = "ARN of the HTTP listener"
   value       = aws_lb_listener.http.arn

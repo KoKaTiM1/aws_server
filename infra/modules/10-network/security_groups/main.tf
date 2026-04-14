@@ -80,34 +80,6 @@ resource "aws_security_group" "ecs_workers" {
     Name = "eyedar-${var.env_name}-ecs-workers-sg"
   })
 }
-
-# Security Group for ECS Dashboard Service
-resource "aws_security_group" "ecs_dashboard" {
-  name        = "eyedar-${var.env_name}-ecs-dashboard-sg"
-  description = "Security group for ECS dashboard service"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    description     = "Traffic from ALB"
-    from_port       = 3000
-    to_port         = 3000
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb_public.id]
-  }
-
-  egress {
-    description = "Allow all outbound"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = merge(var.tags, {
-    Name = "eyedar-${var.env_name}-ecs-dashboard-sg"
-  })
-}
-
 # Security Group for RDS PostgreSQL
 resource "aws_security_group" "rds" {
   name        = "eyedar-${var.env_name}-rds-sg"
@@ -128,14 +100,6 @@ resource "aws_security_group" "rds" {
     to_port         = 5432
     protocol        = "tcp"
     security_groups = [aws_security_group.ecs_workers.id]
-  }
-
-  ingress {
-    description     = "PostgreSQL from ECS Dashboard"
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ecs_dashboard.id]
   }
 
   egress {
@@ -171,14 +135,6 @@ resource "aws_security_group" "redis" {
     to_port         = 6379
     protocol        = "tcp"
     security_groups = [aws_security_group.ecs_workers.id]
-  }
-
-  ingress {
-    description     = "Redis from ECS Dashboard"
-    from_port       = 6379
-    to_port         = 6379
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ecs_dashboard.id]
   }
 
   egress {
