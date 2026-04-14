@@ -38,14 +38,49 @@
 ---
 
 ### Phase 2: GitHub Actions CI/CD Testing (1-2 hours)
-**Goal:** Verify automated build → push → deploy works end-to-end
+**Goal:** Verify automated build → push → deploy works end-to-end via GitHub Actions
 
-- [ ] Trigger workflow with small code change
-- [ ] Verify: Build succeeds → Image pushed to ECR → ECS service updates
-- [ ] No manual steps required
-- [ ] All 6 services build successfully
+**Infrastructure Setup:**
+- [x] Terraform State Backend configured
+  - S3 bucket for remote state: `eyedar-prod-terraform-state`
+  - DynamoDB table for locking: `eyedar-prod-terraform-locks`
+  - Bootstrap script: `scripts/bootstrap-terraform-state.sh` (run once to create S3 + DynamoDB)
+  
+- [x] GitHub Actions Workflow created: `.github/workflows/terraform.yml`
+  - `terraform plan` on PR creation (shows plan in comments)
+  - `terraform apply` on main branch push
+  - `terraform destroy` via manual workflow_dispatch
+  - Uses GitHub OIDC for AWS authentication (no secrets stored)
 
-**Success:** One commit to `main` deploys everything automatically
+**Phase 2 Testing Checklist:**
+- [ ] Run bootstrap script: `./scripts/bootstrap-terraform-state.sh`
+- [ ] Push to test repo (aws_server.git) on main branch
+- [ ] Verify GitHub Actions runs terraform plan
+- [ ] Make small code change (e.g., update tag in .tf file)
+- [ ] Commit and push - verify terraform apply runs automatically
+- [ ] Manually trigger terraform destroy via GitHub Actions workflow
+- [ ] Verify destroy succeeds (all resources removed from AWS)
+- [ ] Manually trigger terraform apply via GitHub Actions workflow
+- [ ] Verify infrastructure recreates from scratch (all 106 resources)
+
+**Success Criteria:**
+- ✅ Bootstrap script creates S3 + DynamoDB without errors
+- ✅ GitHub Actions tf plan runs on PR 
+- ✅ GitHub Actions tf apply runs on merge to main
+- ✅ Terraform destroy via GitHub Actions removes all infrastructure
+- ✅ Terraform apply via GitHub Actions recreates from scratch
+- ✅ No manual AWS console clicks needed (fully automated)
+
+**Service Deployment Testing (After Infrastructure is Stable):**
+- [ ] Update code in services/rust_api or workers/
+- [ ] Push to main branch
+- [ ] Verify GitHub Actions builds Docker images for changed service(s)
+- [ ] Verify images pushed to ECR
+- [ ] Verify ECS service updates with new image
+- [ ] Verify updated service is healthy in ECS console
+- [ ] Test updated service endpoint works correctly
+
+**Success:** Code change → GitHub Actions → ECR → ECS → Live (no manual steps)
 
 ---
 
