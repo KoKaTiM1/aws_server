@@ -22,6 +22,7 @@ RUN cargo build --release 2>/dev/null || true
 
 # Copy actual source
 COPY services/rust_api/src ./src
+COPY services/rust_api/static ./static
 
 # Touch main.rs to rebuild
 RUN touch src/main.rs && cargo build --release

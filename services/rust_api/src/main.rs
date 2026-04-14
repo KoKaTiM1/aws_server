@@ -316,7 +316,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(hb_registry.clone()))
             // .app_data(web::Data::new(mqtt_handle.clone()))
             .service(health_check)
-            // Dashboard page redirects to dashboard/ (with trailing slash)
+            // Dashboard page - serve embedded HTML directly
             .service(
                 web::resource("/dashboard").route(
                     web::get().to(|| async {
@@ -326,8 +326,9 @@ async fn main() -> std::io::Result<()> {
                     })
                 )
             )
-            // Serve all static files with index_file support
-            .service(actix_files::Files::new("/dashboard", "static/").index_file("dashboard.html"))
+            .service(
+                web::resource("/dashboard/").route(web::get().to(dashboard_handler))
+            )
             .service(web::resource("/nonexistent").route(web::get().to(root_nonexistent_handler)))
             .service(
                 web::resource("/api/v1/health").route(web::get().to(|| async { actix_web::HttpResponse::Ok().body("✅ API v1 health OK") }))
