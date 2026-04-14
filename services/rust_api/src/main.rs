@@ -46,6 +46,13 @@ async fn main() -> std::io::Result<()> {
         actix_web::HttpResponse::Ok().body("This is a custom response for /nonexistent")
     }
 
+    // Handler for /dashboard - serves embedded HTML
+    async fn dashboard_handler() -> actix_web::HttpResponse {
+        actix_web::HttpResponse::Ok()
+            .content_type("text/html; charset=utf-8")
+            .body(DASHBOARD_HTML)
+    }
+
     // === Setup Crypto Provider ===
     let provider = rustls::crypto::ring::default_provider();
     provider.install_default().expect("failed to install crypto provider");
