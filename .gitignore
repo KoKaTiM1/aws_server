@@ -116,3 +116,17 @@ site/
 
 # Migration temp files
 migration-*.sql.tmp
+
+# Rust
+target/
+Cargo.lock
+**/.cargo/
+
+# Test artifacts and AWS CLI outputs
+register-params*.json
+alb-*.json
+register_td.json
+reg_response.txt
+flycheck*
+test-*.json
+*_response.json
