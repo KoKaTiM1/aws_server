@@ -8,13 +8,16 @@ const sqsClient = new SQSClient({ region: process.env.AWS_REGION || 'us-east-1' 
 const databaseUrl = process.env.DATABASE_URL;
 
 const pool = new Pool(databaseUrl ?
-  { connectionString: databaseUrl } :
+  { connectionString: databaseUrl, ssl: { rejectUnauthorized: false } } :
   {
     host: process.env.DB_HOST,
     port: parseInt(process.env.DB_PORT) || 5432,
     database: process.env.DB_NAME,
     user: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
+    ssl: {
+      rejectUnauthorized: false,  // RDS uses self-signed certificates
+    }
   }
 );
 
