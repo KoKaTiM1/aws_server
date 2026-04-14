@@ -8,10 +8,16 @@ use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_s3::Client as S3Client;
 use aws_sdk_sqs::Client as SqsClient;
 use aws_sdk_secretsmanager::Client as SecretsClient;
+use rust_api::{S3BucketName, QueueUrlIngest};
 use rust_api::handlers::{
     health::health_check,
 };
 use rust_api::routes::alerts::{post_alert, post_multipart_alert};
+use rust_api::routes::dashboard::{
+    get_dashboard, get_dashboard_overview, get_all_device_health,
+    get_device_health, get_device_metrics_by_id, get_device_activity,
+    get_alerts_endpoint, get_recent_alerts
+};
 use rust_api::middleware::{
     rate_limit::RateLimiter, security::SecurityHeadersMiddleware,
 };
@@ -27,14 +33,6 @@ use rustls::{
 };
 use std::{env, fs::File, io::BufReader};
 use tracing::{info, Level};
-
-// ✅ CRITICAL FIX: Newtype wrappers to distinguish between multiple web::Data<String> items
-// Without these, Actix-web can't distinguish S3_BUCKET from QUEUE_URL_INGEST when both are String
-#[derive(Clone, Debug)]
-pub struct S3BucketName(pub String);
-
-#[derive(Clone, Debug)]
-pub struct QueueUrlIngest(pub String);
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -338,14 +336,19 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/api/v1")
                     .configure(|cfg| {
-                        // CRITICAL ROUTES ONLY - debugging startup crash
+                        // Alert endpoints
                         cfg.service(post_alert);
                         cfg.service(post_multipart_alert);
 
-                        // Temporarily disabled for debugging
-                        // cfg.service(register_hardware);
-                        // cfg.service(rust_api::handlers::hardware::esp_heartbeat);
-                        // ... other routes
+                        // Dashboard endpoints
+                        cfg.service(get_dashboard);
+                        cfg.service(get_dashboard_overview);
+                        cfg.service(get_all_device_health);
+                        cfg.service(get_device_health);
+                        cfg.service(get_device_metrics_by_id);
+                        cfg.service(get_device_activity);
+                        cfg.service(get_alerts_endpoint);
+                        cfg.service(get_recent_alerts);
                     })
             )
     };
