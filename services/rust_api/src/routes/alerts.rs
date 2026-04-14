@@ -10,6 +10,7 @@ use crate::models::hardware::HardwareStatus;
 use crate::routes::dashboard::{log_alert, log_device_activity, register_device, update_device_status};
 use crate::routes::dashboard::{register_device_persistent, log_alert_persistent, log_device_activity_persistent};
 use crate::services::{alert_service::AlertService, image_service::ImageService, device_service::DeviceService, sqs_service::SqsService};
+use crate::{S3BucketName, QueueUrlIngest};
 use std::time::SystemTime;
 use serde::{Deserialize, Serialize};
 
@@ -397,73 +398,80 @@ async fn handle_multipart_alert(
     s3_bucket: &str,
 ) -> Result<HttpResponse, Error> {
     let mut alert_data: Option<AlertPayload> = None;
-    let mut image_path: Option<String> = None;
+    let mut image_paths: Vec<String> = Vec::new(); // Store all uploaded images
     let mut device_id: u32 = 1; // Default device ID
 
     while let Some(mut field) = multipart.try_next().await? {
-        let content_disposition = field.content_disposition();
+        let content_disposition = field.content_disposition().cloned();
 
-        if let Some(name) = content_disposition.and_then(|cd| cd.get_name()) {
-            match name {
-                "device_id" => {
-                    // Extract device_id from form field
-                    let mut bytes = web::BytesMut::new();
-                    while let Some(chunk) = field.try_next().await? {
-                        bytes.extend_from_slice(&chunk);
-                    }
-                    if let Ok(id_str) = std::str::from_utf8(&bytes) {
-                        if let Ok(id) = id_str.trim().parse::<u32>() {
-                            device_id = id;
-                            println!("📱 Device ID extracted: {}", device_id);
+        if let Some(cd) = content_disposition {
+            if let Some(name) = cd.get_name() {
+                match name {
+                    "device_id" => {
+                        // Extract device_id from form field
+                        let mut bytes = web::BytesMut::new();
+                        while let Some(chunk) = field.try_next().await? {
+                            bytes.extend_from_slice(&chunk);
+                        }
+                        if let Ok(id_str) = std::str::from_utf8(&bytes) {
+                            if let Ok(id) = id_str.trim().parse::<u32>() {
+                                device_id = id;
+                                println!("📱 Device ID extracted: {}", device_id);
+                            }
                         }
                     }
-                }
-                "alert_data" => {
-                    // Handle JSON alert data
-                    let mut bytes = web::BytesMut::new();
-                    while let Some(chunk) = field.try_next().await? {
-                        bytes.extend_from_slice(&chunk);
+                    "alert_data" => {
+                        // Handle JSON alert data
+                        let mut bytes = web::BytesMut::new();
+                        while let Some(chunk) = field.try_next().await? {
+                            bytes.extend_from_slice(&chunk);
+                        }
+
+                        alert_data = Some(serde_json::from_slice::<AlertPayload>(&bytes)
+                            .map_err(|e| actix_web::error::ErrorBadRequest(format!("Invalid JSON: {}", e)))?);
                     }
+                    // Handle single image or multiple numbered images (image, image_1, image_2, image_3, etc.)
+                    field_name if field_name == "image" || field_name.starts_with("image_") => {
+                        // Extract filename before field mutation
+                        let filename = cd.get_filename().map(|f| f.to_string());
+                        let file_extension = filename.as_ref()
+                            .and_then(|f| {
+                                std::path::Path::new(f)
+                                    .extension()
+                                    .and_then(|ext| ext.to_str())
+                                    .map(|s| s.to_string())
+                            })
+                            .unwrap_or_else(|| "jpg".to_string());
 
-                    alert_data = Some(serde_json::from_slice::<AlertPayload>(&bytes)
-                        .map_err(|e| actix_web::error::ErrorBadRequest(format!("Invalid JSON: {}", e)))?);
-                }
-                "image" => {
-                    // Upload image to S3 (no local filesystem)
-                    let _timestamp = chrono::Utc::now().timestamp_millis();
-                    let file_extension = if let Some(filename) = content_disposition.and_then(|cd| cd.get_filename()) {
-                        std::path::Path::new(filename)
-                            .extension()
-                            .and_then(|ext| ext.to_str())
-                            .unwrap_or("jpg")
-                            .to_string()
-                    } else {
-                        "jpg".to_string()
-                    };
+                        // Read image bytes
+                        let mut image_bytes = Vec::new();
+                        while let Some(chunk) = field.try_next().await? {
+                            image_bytes.extend_from_slice(&chunk);
+                        }
 
-                    // Read image bytes
-                    let mut image_bytes = Vec::new();
-                    while let Some(chunk) = field.try_next().await? {
-                        image_bytes.extend_from_slice(&chunk);
+                        if image_bytes.is_empty() {
+                            println!("⚠️ Skipping empty image field: {}", field_name);
+                            continue;
+                        }
+
+                        // Upload to S3
+                        let s3_uri = ImageService::save_raw_image(
+                            image_bytes,
+                            Some(file_extension),
+                            device_id,
+                            s3_client,
+                            s3_bucket
+                        )
+                            .await
+                            .map_err(|e| actix_web::error::ErrorInternalServerError(format!("S3 upload failed for {}: {}", field_name, e)))?;
+
+                        println!("📸 Uploaded alert image {} to S3: {}", field_name, s3_uri);
+                        image_paths.push(s3_uri);
                     }
-
-                    // Upload to S3
-                    let s3_uri = ImageService::save_raw_image(
-                        image_bytes,
-                        Some(file_extension),
-                        device_id,
-                        s3_client,
-                        s3_bucket
-                    )
-                        .await
-                        .map_err(|e| actix_web::error::ErrorInternalServerError(format!("S3 upload failed: {}", e)))?;
-
-                    image_path = Some(s3_uri);
-                    println!("📸 Uploaded alert image to S3: {:?}", image_path);
-                }
-                _ => {
-                    // Skip unknown fields
-                    while let Some(_chunk) = field.try_next().await? {}
+                    _ => {
+                        // Skip unknown fields
+                        while let Some(_chunk) = field.try_next().await? {}
+                    }
                 }
             }
         }
@@ -473,24 +481,27 @@ async fn handle_multipart_alert(
         actix_web::error::ErrorBadRequest("Missing alert_data field")
     })?;
 
-    println!("⚠ Received alert with image from device {}: {:?}", device_id, alert);
-    
+    println!("⚠ Received alert with {} images from device {}: {:?}", image_paths.len(), device_id, alert);
+
+    // Use first image as primary, or None if no images
+    let image_path = image_paths.first().cloned();
+
     // Ensure device is registered and mark as online
-        // TEMP DISABLED: ensure_device_registered(device_id);
-        // TEMP DISABLED: update_device_status(device_id, HardwareStatus::Online);
-    println!("✅ Device {} marked as online (multipart alert received)", device_id);
-    
+    println!("✅ Device {} marked as online (multipart alert received with {} images)", device_id, image_paths.len());
+
     // Parse severity using service
     let severity = AlertService::parse_severity_from_message(&alert.message);
-    
+
     log_alert_to_dashboard(&**pool, device_id, &alert.message, image_path.clone(), severity).await;
-    
+
     Ok(HttpResponse::Accepted().json(serde_json::json!({
         "status": "received",
         "message": alert.message,
         "timestamp": alert.timestamp,
         "device_id": device_id,
         "image_path": image_path,
+        "total_images_uploaded": image_paths.len(),
+        "all_image_paths": image_paths,
     })))
 }
 
