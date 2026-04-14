@@ -155,9 +155,30 @@ YOLO verifies animal
    - **Note:** This is expected - the state was synced with active resources before code changes
    - **Next step:** When running `terraform destroy`, these will be cleaned up as expected
 
+3. **ECR repositories have force_delete restrictions**
+   - **Finding:** `terraform destroy` fails with "ECR Repository not empty" errors
+   - **Root cause:** AWS ECR repos contain Docker images; Terraform needs `force_delete = true` to allow deletion
+   - **Affected repositories:** api, rust_api, worker_ingest, worker_verify, worker_notify, mqtt_monitor, dashboard
+   - **Resolution:** Added `force_delete = true` to all aws_ecr_repository resources in infra/modules/40-compute/ecr/main.tf
+   - **Status:** ✅ FIXED in code (applied in next terraform apply)
+
+4. **RDS has deletion protection enabled by default**
+   - **Finding:** `terraform destroy` fails with "Cannot delete protected DB Instance" error
+   - **Root cause:** RDS in rds_postgres module defaults to `deletion_protection = true`
+   - **Resolution:** Added `deletion_protection = false` to RDS module call in infra/envs/prod/main.tf
+   - **Status:** ✅ FIXED in code (applied in next terraform apply)
+
+5. **S3 bucket force_destroy not explicitly enabled**
+   - **Finding:** `terraform destroy` fails with "bucket you tried to delete is not empty" error
+   - **Root cause:** S3 module has `force_destroy = var.force_destroy` but prod environment doesn't pass the variable
+   - **Resolution:** Added `force_destroy = true` to s3_objects module call in infra/envs/prod/main.tf
+   - **Status:** ✅ FIXED in code (applied in next terraform apply)
+
 #### Remaining Tasks (Phase 1):
-- [ ] Run `terraform destroy` (approved after code cleanup)
+- [ ] Complete `terraform apply` to update RDS and S3 protection settings
+- [ ] Run `terraform destroy` again (should succeed now)
 - [ ] Verify all resources destroyed successfully
+- [ ] If S3/ECR still fail, manually delete objects via AWS CLI then retry
 - [ ] Document any errors or unexpected behavior
 - [ ] Run `terraform apply` for fresh deployment
 - [ ] Capture all created resource ARNs and IDs

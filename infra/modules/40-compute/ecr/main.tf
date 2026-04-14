@@ -2,6 +2,7 @@
 resource "aws_ecr_repository" "api" {
   name                 = "eyedar-${var.env_name}-api"
   image_tag_mutability = var.image_tag_mutability
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = var.scan_on_push
@@ -41,6 +42,7 @@ resource "aws_ecr_lifecycle_policy" "api" {
 resource "aws_ecr_repository" "worker_ingest" {
   name                 = "eyedar-${var.env_name}-worker-ingest"
   image_tag_mutability = var.image_tag_mutability
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = var.scan_on_push
@@ -79,6 +81,7 @@ resource "aws_ecr_lifecycle_policy" "worker_ingest" {
 resource "aws_ecr_repository" "worker_verify" {
   name                 = "eyedar-${var.env_name}-worker-verify"
   image_tag_mutability = var.image_tag_mutability
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = var.scan_on_push
@@ -117,6 +120,7 @@ resource "aws_ecr_lifecycle_policy" "worker_verify" {
 resource "aws_ecr_repository" "worker_notify" {
   name                 = "eyedar-${var.env_name}-worker-notify"
   image_tag_mutability = var.image_tag_mutability
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = var.scan_on_push
@@ -155,6 +159,7 @@ resource "aws_ecr_lifecycle_policy" "worker_notify" {
 resource "aws_ecr_repository" "rust_api" {
   name                 = "eyedar-${var.env_name}-rust-api"
   image_tag_mutability = var.image_tag_mutability
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = var.scan_on_push
@@ -193,6 +198,7 @@ resource "aws_ecr_lifecycle_policy" "rust_api" {
 resource "aws_ecr_repository" "mqtt_monitor" {
   name                 = "eyedar-${var.env_name}-mqtt-monitor"
   image_tag_mutability = var.image_tag_mutability
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = var.scan_on_push

@@ -79,25 +79,27 @@ module "security_groups" {
 module "s3_objects" {
   source = "../../modules/20-data/s3_objects"
 
-  env_name    = local.env_name
-  kms_key_arn = module.kms.kms_key_arn
-  tags        = local.tags
+  env_name     = local.env_name
+  kms_key_arn  = module.kms.kms_key_arn
+  force_destroy = true
+  tags         = local.tags
 }
 
 module "rds" {
   source = "../../modules/20-data/rds_postgres"
 
-  env_name             = local.env_name
-  vpc_id               = module.vpc.vpc_id
-  private_subnet_ids   = module.vpc.private_subnet_ids
-  security_group_id    = module.security_groups.sg_rds_id
-  kms_key_arn          = module.kms.kms_key_arn
-  db_secret_arn        = module.secrets.db_secret_arn
-  instance_class       = var.rds_instance_class
-  allocated_storage    = var.rds_allocated_storage
-  multi_az             = var.rds_multi_az
+  env_name              = local.env_name
+  vpc_id                = module.vpc.vpc_id
+  private_subnet_ids    = module.vpc.private_subnet_ids
+  security_group_id     = module.security_groups.sg_rds_id
+  kms_key_arn           = module.kms.kms_key_arn
+  db_secret_arn         = module.secrets.db_secret_arn
+  instance_class        = var.rds_instance_class
+  allocated_storage     = var.rds_allocated_storage
+  multi_az              = var.rds_multi_az
+  deletion_protection   = false
   backup_retention_days = 7  # 7-day retention for automated backups
-  tags                 = local.tags
+  tags                  = local.tags
 }
 
 module "redis" {
