@@ -174,13 +174,34 @@ YOLO verifies animal
    - **Resolution:** Added `force_destroy = true` to s3_objects module call in infra/envs/prod/main.tf
    - **Status:** ✅ FIXED in code (applied in next terraform apply)
 
+6. **Secrets Manager deletion scheduling conflict**
+   - **Finding:** After destroy, terraform apply fails with "secret...already scheduled for deletion" for db-password, firebase-key, and api-keys secrets
+   - **Root cause:** AWS Secrets Manager schedules secrets for deletion over 7 days; can't recreate with same name until deletion completes
+   - **Impact:** Terraform can't reapply while secrets are in deletion state
+   - **Workaround:** Either (a) wait for 7-day schedule, (b) manually cancel deletion in AWS Console, or (c) use sleep/retry in CI/CD
+   - **Status:** ⚠️ REQUIRES MANUAL INTERVENTION or wait for deletion schedule
+   - **Solution for next apply:** Skip deletion scheduler or force immediate deletion via AWS API
+
+7. **Dashboard ECR repository still not force_deleted**
+   - **Finding:** Even with force_delete = true in code, dashboard ECR fails to delete
+   - **Root cause:** force_delete setting may not have been applied to existing state
+   - **Impact:** Dashboard ECR repo remains, blocking full destroy
+   - **Resolution:** Manually delete via AWS CLI: `aws ecr delete-repository --repository-name eyedar-prod-dashboard --force`
+   - **Status:** ⚠️ REQUIRES MANUAL AWS CLI COMMAND
+
+8. **Security group has dependent resources**
+   - **Finding:** ECS dashboard security group (sg-06bed288adb81eb94) has dependent objects preventing deletion
+   - **Root cause:** Network interfaces or other resources still attached; race condition in destroy order
+   - **Impact:** Prevents full infrastructure cleanup
+   - **Status:** ⚠️ likely resolves after manual ECR deletion and secret scheduling expires
+
 #### Remaining Tasks (Phase 1):
-- [ ] Complete `terraform apply` to update RDS and S3 protection settings
-- [ ] Run `terraform destroy` again (should succeed now)
-- [ ] Verify all resources destroyed successfully
-- [ ] If S3/ECR still fail, manually delete objects via AWS CLI then retry
-- [ ] Document any errors or unexpected behavior
-- [ ] Run `terraform apply` for fresh deployment
+- [ ] Option A (Recommended): Wait 5-10 minutes for deletion scheduling to expire, then retry terraform destroy + apply
+- [ ] Option B (Manual cleanup): 
+  - [ ] `aws ecr delete-repository --repository-name eyedar-prod-dashboard --force`
+  - [ ] `aws secretsmanager restore-secret --secret-id eyedar-prod-db-password-v3` (cancel deletion)
+  - [ ] Retry terraform destroy
+- [ ] Run fresh `terraform destroy` to remove all infrastructure
+- [ ] Run `terraform apply` to rebuild from scratch
 - [ ] Capture all created resource ARNs and IDs
-- [ ] Verify RDS, S3, ECS, ALB, etc. all functional post-deploy
 
