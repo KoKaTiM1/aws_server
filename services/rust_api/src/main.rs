@@ -122,6 +122,9 @@ async fn main() -> std::io::Result<()> {
 
     // Validate S3 bucket access at startup
     let s3_bucket = env::var("S3_BUCKET").expect("S3_BUCKET must be set");
+    println!("🔍 DEBUG main.rs: S3_BUCKET env var read = '{}'", s3_bucket);
+    println!("🔍 DEBUG main.rs: S3_BUCKET length = {}", s3_bucket.len());
+
     match s3_client.list_objects_v2().bucket(&s3_bucket).max_keys(1).send().await {
         Ok(_) => println!("✅ AWS S3 connection successful! Bucket '{s3_bucket}' is accessible."),
         Err(e) => {
@@ -137,6 +140,9 @@ async fn main() -> std::io::Result<()> {
     //     r"serengeti/train_yolo.py",
     // );
     println!("⚠️  YOLO service disabled (home server local files not available in AWS)");
+
+    // DEBUG: Add a test endpoint that returns the S3_BUCKET value
+    println!("📋 REGISTERING DEBUG ROUTE: /debug/s3bucket");
 
     // === Initialize Postgres Connection Pool ===
     use sqlx::postgres::PgPoolOptions;
@@ -292,7 +298,12 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .app_data(web::Data::new(s3_client.clone()))
             .app_data(web::Data::new(sqs_client.clone()))
-            .app_data(web::Data::new(s3_bucket.clone()))
+            .app_data({
+                println!("🔍 DEBUG main.rs: About to register s3_bucket as app_data = '{}'", s3_bucket);
+                let data = web::Data::new(s3_bucket.clone());
+                println!("🔍 DEBUG main.rs: s3_bucket wrapped in web::Data = '{}'", *data);
+                data
+            })
             .app_data(web::Data::new(env::var("QUEUE_URL_INGEST").unwrap_or_default()))
             // .app_data(web::Data::new(yolo_service.clone()))  // DISABLED - local files not in AWS
             .app_data(web::Data::new(pool.clone()))
@@ -305,6 +316,16 @@ async fn main() -> std::io::Result<()> {
             .service(web::resource("/nonexistent").route(web::get().to(root_nonexistent_handler)))
             .service(
                 web::resource("/api/v1/health").route(web::get().to(|| async { actix_web::HttpResponse::Ok().body("✅ API v1 health OK") }))
+            )
+            // TEMP DEBUG: Simple endpoint to check S3_BUCKET value - read env var directly
+            .service(
+                web::resource("/api/v1/debug/s3bucket").route(web::get().to(|| async {
+                    let s3_bucket_from_env = std::env::var("S3_BUCKET").unwrap_or_else(|_| "NOT_SET".to_string());
+                    actix_web::HttpResponse::Ok().json(serde_json::json!({
+                        "s3_bucket_from_env": s3_bucket_from_env,
+                        "from_env_is_empty": s3_bucket_from_env.is_empty(),
+                    }))
+                }))
             )
             .service(
                 web::scope("/api/v1")

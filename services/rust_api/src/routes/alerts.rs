@@ -137,6 +137,9 @@ pub async fn post_alert(
     sqs_client: web::Data<SqsClient>,
     queue_url_ingest: web::Data<String>,
 ) -> Result<HttpResponse, Error> {
+    println!("🔍 DEBUG alerts.rs::post_alert: s3_bucket received = '{}'", *s3_bucket);
+    println!("🔍 DEBUG alerts.rs::post_alert: s3_bucket length = {}", s3_bucket.len());
+
     let content_type = req
         .headers()
         .get("content-type")

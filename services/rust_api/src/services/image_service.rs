@@ -15,7 +15,18 @@ impl ImageService {
         s3_client: &S3Client,
         s3_bucket: &str,
     ) -> Result<String, Error> {
-        println!("📸 ImageService::save_base64_image (S3) called for device {}", device_id);
+        println!("📸 ImageService::save_base64_image called for device {}", device_id);
+        if s3_bucket.is_empty() {
+            eprintln!("❌ ERROR: s3_bucket is EMPTY!");
+            eprintln!("   s3_bucket value: '{}'", s3_bucket);
+            eprintln!("   s3_bucket len: {}", s3_bucket.len());
+            eprintln!("   s3_bucket bytes: {:?}", s3_bucket.as_bytes());
+            return Err(actix_web::error::ErrorInternalServerError(
+                format!("S3 bucket name is empty (len={}; value='{}'; bytes={:?})", s3_bucket.len(), s3_bucket, s3_bucket.as_bytes())
+            ));
+        }
+        println!("   Bucket: '{}' (len: {})", s3_bucket, s3_bucket.len());
+        println!("   Base64 data size: {} bytes", base64_data.len());
 
         let original_data = base64_data.clone();
 
@@ -47,11 +58,11 @@ impl ImageService {
         let timestamp = chrono::Utc::now().timestamp_millis();
         let unique_id = uuid::Uuid::new_v4();
         let s3_key = format!("detections/{}/{}_{}.{}", device_id, timestamp, unique_id, extension);
+        println!("   S3 key: '{}'", s3_key);
 
         // Upload to S3
         let byte_stream = ByteStream::from(image_bytes);
-        println!("📤 S3 Upload (base64): bucket={}, key={}, content-type={}",
-                 s3_bucket, s3_key, Self::get_mime_type(&extension));
+        println!("📤 S3 Upload (base64): bucket='{}', key='{}'", s3_bucket, s3_key);
 
         let result = s3_client
             .put_object()
@@ -101,8 +112,7 @@ impl ImageService {
 
         // Upload to S3
         let byte_stream = ByteStream::from(image_bytes);
-        println!("📤 S3 Upload (raw): bucket={}, key={}, content-type={}",
-                 s3_bucket, s3_key, Self::get_mime_type(&extension));
+        println!("📤 S3 Upload (raw): bucket='{}', key='{}'", s3_bucket, s3_key);
 
         let result = s3_client
             .put_object()
