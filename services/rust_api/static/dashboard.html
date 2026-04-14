@@ -1,0 +1,2870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Eye-Dar Console</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <style>
+        /* =====================================================================
+           GLOBAL LAYOUT & THEME
+           ===================================================================== */
+        :root {
+            --bg-body: #f3f4f6;
+            --bg-surface: #ffffff;
+            --bg-subtle: #f9fafb;
+            --border-subtle: #e5e7eb;
+            --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.06);
+            --shadow-medium: 0 4px 6px rgba(0, 0, 0, 0.08);
+
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+
+            --accent: #2563eb;
+            --accent-soft: #eff6ff;
+            --accent-hover: #1d4ed8;
+
+            --success: #16a34a;
+            --success-soft: #dcfce7;
+            --danger: #dc2626;
+            --danger-soft: #fee2e2;
+            --warning: #d97706;
+            --warning-soft: #fef3c7;
+            --info: #0ea5e9;
+
+            --radius-lg: 10px;
+            --radius-xl: 12px;
+
+            /* Sidebar width is now a variable so we can resize it */
+            --sidebar-width: 220px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-body);
+            color: var(--text-primary);
+        }
+
+        .app-shell {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            transition: background-color 0.15s ease;
+        }
+
+        /* =====================================================================
+           TOP BAR (HEADER)
+           ===================================================================== */
+        .top-bar {
+            height: 56px;
+            background: #111827;
+            color: #f9fafb;
+            display: flex;
+            align-items: center;
+            padding: 0 18px;
+            box-shadow: 0 1px 0 rgba(15, 23, 42, 0.7);
+            z-index: 20;
+        }
+
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .top-bar-logo {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.05);
+        }
+
+        .top-bar-logo i {
+            color: #eff6ff;
+            font-size: 14px;
+        }
+
+        .top-bar-title {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .top-bar-env {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 11px;
+            background: rgba(52, 211, 153, 0.12);
+            color: #6ee7b7;
+            margin-left: 6px;
+        }
+
+        .top-bar-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .top-bar-pill {
+            padding: 3px 8px;
+            border-radius: 9999px;
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            color: #e5e7eb;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .top-bar-user {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #e5e7eb;
+        }
+
+        .top-bar-avatar {
+            width: 22px;
+            height: 22px;
+            border-radius: 999px;
+            background: #1f2937;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+        }
+
+        /* Toggle button in the top bar for open/close sidebar */
+        .top-bar-toggle {
+            border-color: transparent;
+            background: transparent;
+            color: #9ca3af;
+            width: 28px;
+            height: 28px;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .top-bar-toggle:hover {
+            background: #1f2937;
+            color: #e5e7eb;
+        }
+
+        /* =====================================================================
+           SIDEBAR + RESIZER + MAIN CONTENT
+           ===================================================================== */
+        .shell-main {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            background: #111827;
+            border-right: 1px solid #0f172a;
+            color: #9ca3af;
+            padding: 12px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            font-size: 13px;
+            flex-shrink: 0;
+            overflow: hidden;
+            transition: width 0.15s ease;
+        }
+
+        .sidebar-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #6b7280;
+            padding: 4px 10px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #e5e7eb;
+        }
+
+        .nav-item i {
+            font-size: 14px;
+            width: 16px;
+        }
+
+        .nav-item span {
+            flex: 1;
+        }
+
+        .nav-item.active {
+            background: rgba(37, 99, 235, 0.18);
+            color: #bfdbfe;
+        }
+
+        .nav-item:hover {
+            background: rgba(31, 41, 55, 0.9);
+        }
+
+        .nav-item-badge {
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.6);
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding-top: 8px;
+            border-top: 1px solid #1f2937;
+            font-size: 11px;
+            color: #6b7280;
+        }
+
+        /* Resizer bar between sidebar and main content */
+        .sidebar-resizer {
+            width: 4px;
+            cursor: col-resize;
+            flex-shrink: 0;
+            position: relative;
+            background: transparent;
+        }
+
+        .sidebar-resizer::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 1px;
+            width: 2px;
+            background: transparent;
+            transition: background-color 0.15s ease;
+        }
+
+        .sidebar-resizer:hover::after {
+            background: rgba(148, 163, 184, 0.7);
+        }
+
+        .content {
+            flex: 1;
+            padding: 16px 20px;
+            overflow: auto;
+        }
+
+        /* Collapsed sidebar state */
+        .app-shell.sidebar-collapsed .sidebar {
+            width: 52px;
+        }
+
+        .app-shell.sidebar-collapsed .sidebar-section-title {
+            display: none;
+        }
+
+        .app-shell.sidebar-collapsed .sidebar .nav-item span:not(.nav-item-badge) {
+            display: none;
+        }
+
+        .app-shell.sidebar-collapsed .sidebar-footer {
+            display: none;
+        }
+
+        .app-shell.sidebar-collapsed .sidebar-resizer {
+            display: none;
+        }
+
+        /* =====================================================================
+           MAIN CONTENT
+           ===================================================================== */
+        .content-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .content-header-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .content-header-subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .content-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn {
+            border-radius: 6px;
+            border: 1px solid var(--border-subtle);
+            padding: 6px 10px;
+            font-size: 12px;
+            background: var(--bg-surface);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-secondary);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #ffffff;
+            border-color: var(--accent);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-quiet {
+            border-color: transparent;
+            background: transparent;
+            padding: 4px 6px;
+        }
+
+        .btn-icon {
+            border-radius: 999px;
+            width: 26px;
+            height: 26px;
+            padding: 0;
+            justify-content: center;
+        }
+
+        .badge-dot {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .badge-dot span.dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: var(--success);
+        }
+
+        .section-card {
+            background: var(--bg-surface);
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--border-subtle);
+            box-shadow: var(--shadow-soft);
+            padding: 14px;
+        }
+
+        .section-title-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .section-title-bar h3 {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .section-title-bar span {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* =====================================================================
+           DEVICES CONSOLE VIEW
+           ===================================================================== */
+        .console-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1.2fr);
+            gap: 12px;
+            align-items: start;
+        }
+
+        .console-toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .input {
+            border-radius: 6px;
+            border: 1px solid var(--border-subtle);
+            padding: 5px 8px;
+            font-size: 12px;
+            background: var(--bg-subtle);
+            color: var(--text-primary);
+        }
+
+        .input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .input-icon-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-subtle);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .input-icon-wrapper input {
+            border: none;
+            outline: none;
+            background: transparent;
+            font-size: 12px;
+            color: var(--text-primary);
+        }
+
+        .input-select {
+            padding-right: 24px;
+        }
+
+        .table-wrapper {
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-surface);
+            overflow: auto;
+            box-shadow: var(--shadow-soft);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        thead {
+            background: var(--bg-subtle);
+        }
+
+        th, td {
+            padding: 7px 10px;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        th {
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        td {
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        .row-selectable {
+            cursor: pointer;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: 11px;
+        }
+
+        .status-online {
+            background: var(--success-soft);
+            color: var(--success);
+        }
+
+        .status-offline {
+            background: var(--danger-soft);
+            color: var(--danger);
+        }
+
+        .status-maintenance {
+            background: var(--warning-soft);
+            color: var(--warning);
+        }
+
+        .mode-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: 11px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .mode-pill.dev {
+            background: #fefce8;
+            color: #854d0e;
+        }
+
+        .mode-pill.prod {
+            background: #f0f9ff;
+            color: #0369a1;
+        }
+
+        .muted {
+            color: var(--text-muted);
+        }
+
+        /* Detail panel */
+        .detail-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .detail-header-main {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .detail-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .detail-meta {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            font-size: 11px;
+        }
+
+        .detail-item-label {
+            color: var(--text-secondary);
+        }
+
+        .detail-item-value {
+            font-weight: 500;
+        }
+
+        .switch-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 8px;
+            border-radius: 8px;
+            background: var(--bg-subtle);
+        }
+
+        .switch-row-main {
+            font-size: 11px;
+        }
+
+        .switch-row-main strong {
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: #d1d5db;
+            transition: .2s;
+            border-radius: 999px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .2s;
+            border-radius: 50%;
+        }
+
+        .switch input:checked + .slider {
+            background-color: var(--accent);
+        }
+
+        .switch input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        .console-footer-note {
+            margin-top: 4px;
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .placeholder-panel {
+            font-size: 12px;
+            color: var(--text-secondary);
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            background: var(--bg-subtle);
+            border: 1px dashed var(--border-subtle);
+        }
+
+        /* =====================================================================
+           OVERVIEW DASHBOARD VIEW
+           ===================================================================== */
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .metric-card {
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-subtle);
+            padding: 10px;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .metric-title {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .metric-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .overview-main {
+            display: grid;
+            grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1.2fr);
+            gap: 12px;
+            margin-top: 4px;
+        }
+
+        .list-scroll {
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .alert-item {
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+            padding: 8px;
+            font-size: 11px;
+            background: var(--bg-subtle);
+            margin-bottom: 6px;
+        }
+
+        .alert-title-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+        }
+
+        .alert-title {
+            font-weight: 500;
+        }
+
+        .severity-badge {
+            border-radius: 999px;
+            padding: 1px 7px;
+            font-size: 10px;
+        }
+
+        .severity-critical {
+            background: var(--danger-soft);
+            color: var(--danger);
+        }
+
+        .severity-high {
+            background: var(--danger-soft);
+            color: var(--danger);
+        }
+
+        .severity-medium {
+            background: var(--warning-soft);
+            color: var(--warning);
+        }
+
+        .severity-low {
+            background: var(--accent-soft);
+            color: var(--accent);
+        }
+
+        .alert-meta {
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .photo-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .photo-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 6px;
+            overflow: hidden;
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-subtle);
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .photo-item:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-item-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+            color: white;
+            padding: 4px 6px;
+            font-size: 9px;
+        }
+
+        .detection-feed {
+            display: grid;
+            gap: 8px;
+            margin-top: 8px;
+            max-height: 260px;
+            overflow: auto;
+        }
+
+        .detection-tabs {
+            display: inline-flex;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .detection-tab {
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-subtle);
+            color: var(--text-secondary);
+            border-radius: 999px;
+            font-size: 10px;
+            padding: 3px 8px;
+            cursor: pointer;
+        }
+
+        .detection-tab.active {
+            background: var(--accent-soft);
+            color: var(--accent);
+            border-color: #bfdbfe;
+        }
+
+        .detection-row {
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 8px;
+            background: var(--bg-subtle);
+            display: grid;
+            grid-template-columns: 72px 1fr;
+            gap: 8px;
+        }
+
+        .detection-thumb {
+            width: 72px;
+            height: 72px;
+            border-radius: 6px;
+            background: #e5e7eb;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .detection-meta-line {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .detection-sensor {
+            display: inline-block;
+            border-radius: 999px;
+            border: 1px solid var(--border-subtle);
+            padding: 1px 7px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-right: 6px;
+            color: var(--text-primary);
+            background: #fff;
+        }
+
+        .detection-message {
+            font-size: 12px;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            line-height: 1.35;
+        }
+
+        .detection-path {
+            font-size: 10px;
+            color: var(--text-muted);
+            word-break: break-all;
+        }
+
+        .photo-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .photo-modal.active {
+            display: flex;
+        }
+
+        .photo-modal-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+        .photo-modal-content img {
+            max-width: 100%;
+            max-height: 90vh;
+            border-radius: 8px;
+        }
+
+        .photo-modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .photo-modal-close:hover {
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        /* All photos gallery modal */
+        .all-photos-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .all-photos-modal.active {
+            display: flex;
+        }
+
+        .all-photos-content {
+            background: var(--bg-surface);
+            border-radius: var(--radius-xl);
+            width: 90%;
+            max-width: 900px;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .all-photos-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .all-photos-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .all-photos-gallery {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            align-content: start;
+        }
+
+        .all-photo-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            background: var(--bg-subtle);
+            min-height: 156px;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .all-photo-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .all-photo-item img {
+            width: 100%;
+            height: 128px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .all-photo-item-time {
+            position: static;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            font-size: 11px;
+            padding: 4px 6px;
+            text-align: center;
+        }
+
+        .all-photos-close {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 20px;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: background-color 0.15s ease;
+        }
+
+        .all-photos-close:hover {
+            background: var(--bg-subtle);
+        }
+
+        .activity-item {
+            font-size: 11px;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .activity-primary {
+            font-weight: 500;
+        }
+
+        .activity-secondary {
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        .stat-list-item {
+            font-size: 11px;
+            padding: 4px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* =====================================================================
+           NOTIFICATIONS (TOAST)
+           ===================================================================== */
+        .toast {
+            position: fixed;
+            right: 16px;
+            bottom: 16px;
+            min-width: 220px;
+            background: #111827;
+            color: #e5e7eb;
+            border-radius: 8px;
+            padding: 8px 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            box-shadow: var(--shadow-medium);
+            z-index: 1000;
+        }
+
+        .toast-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #1f2937;
+        }
+
+        .toast-success .toast-icon {
+            background: var(--success-soft);
+            color: var(--success);
+        }
+
+        .toast-error .toast-icon {
+            background: var(--danger-soft);
+            color: var(--danger);
+        }
+
+        .toast-info .toast-icon {
+            background: var(--accent-soft);
+            color: var(--accent);
+        }
+
+        .toast-text {
+            flex: 1;
+        }
+
+        /* =====================================================================
+           RESPONSIVE
+           ===================================================================== */
+        @media (max-width: 1024px) {
+            .console-layout,
+            .overview-main {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .top-bar {
+                padding: 0 12px;
+            }
+
+            .top-bar-title {
+                font-size: 14px;
+            }
+
+            .top-bar-env,
+            .top-bar-right {
+                display: none;
+            }
+
+            .shell-main {
+                position: relative;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 56px;
+                left: 0;
+                bottom: 0;
+                width: min(82vw, 280px);
+                z-index: 90;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+                transition: transform 0.18s ease;
+            }
+
+            .app-shell.sidebar-collapsed .sidebar {
+                width: min(82vw, 280px);
+                transform: translateX(-100%);
+            }
+
+            .sidebar-resizer {
+                display: none;
+            }
+
+            .content {
+                padding: 12px;
+            }
+
+            .content-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .content-header-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            /* Touch targets: make controls easier to tap on phones */
+            .btn,
+            .btn-quiet,
+            .btn-icon,
+            .top-bar-toggle,
+            .all-photos-close,
+            .photo-modal-close {
+                min-width: 40px;
+                min-height: 40px;
+            }
+
+            .btn {
+                padding: 8px 12px;
+            }
+
+            .btn-icon,
+            .top-bar-toggle {
+                width: 40px;
+                height: 40px;
+            }
+
+            .section-title-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .console-toolbar {
+                flex-direction: column;
+            }
+
+            .input-icon-wrapper,
+            .input-select {
+                width: 100%;
+            }
+
+            .detail-grid {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .switch-row {
+                align-items: center;
+            }
+
+            .table-wrapper {
+                overflow-x: auto;
+            }
+
+            th, td {
+                padding: 6px 8px;
+            }
+
+            .overview-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .photo-gallery {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .detection-row {
+                grid-template-columns: 60px 1fr;
+                gap: 6px;
+            }
+
+            .detection-thumb {
+                width: 60px;
+                height: 60px;
+            }
+
+            .all-photos-content {
+                width: 96%;
+                height: 86vh;
+            }
+
+            .all-photos-gallery {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    <!-- =====================================================================
+         TOP BAR
+         ===================================================================== -->
+    <header class="top-bar">
+        <div class="top-bar-left">
+            <button class="top-bar-toggle" onclick="toggleSidebar()" title="Toggle navigation">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="top-bar-logo">
+                <i class="fas fa-eye"></i>
+            </div>
+            <div>
+                <div class="top-bar-title">Eye-Dar Console</div>
+            </div>
+            <div class="top-bar-env">
+                <i class="fas fa-circle"></i>
+                <span>ENV: PROD</span>
+            </div>
+        </div>
+        <div class="top-bar-right">
+            <div class="top-bar-pill">
+                <i class="fas fa-clock"></i>
+                <span id="lastUpdated">Last update: –</span>
+            </div>
+            <div class="top-bar-user">
+                <div class="top-bar-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <span>Operator</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- =====================================================================
+         SIDEBAR + RESIZER + MAIN CONTENT
+         ===================================================================== -->
+    <div class="shell-main">
+        <!-- Sidebar navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-section-title">Navigation</div>
+            <div class="nav-item active" data-view="console" onclick="switchView('console', this)">
+                <i class="fas fa-table"></i>
+                <span>Devices Console</span>
+            </div>
+            <div class="nav-item" data-view="overview" onclick="switchView('overview', this)">
+                <i class="fas fa-chart-bar"></i>
+                <span>Overview Dashboard</span>
+            </div>
+
+            <div class="sidebar-section-title">System</div>
+            <div class="nav-item">
+                <i class="fas fa-bell"></i>
+                <span>Alert Rules</span>
+                <span class="nav-item-badge">Soon</span>
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-sliders-h"></i>
+                <span>Settings</span>
+                <span class="nav-item-badge">Soon</span>
+            </div>
+
+            <div class="sidebar-footer">
+                <div>Eye-Dar Wildlife Safety Platform</div>
+                <div style="margin-top: 2px;">Console version: 0.1</div>
+            </div>
+        </aside>
+
+        <!-- Resizer bar -->
+        <div class="sidebar-resizer" id="sidebarResizer"></div>
+
+        <!-- Main content -->
+        <main class="content">
+            <!-- Header (per view) -->
+            <div class="content-header">
+                <div>
+                    <div class="content-header-title" id="viewTitle">Devices Console</div>
+                    <div class="content-header-subtitle" id="viewSubtitle">
+                        Manage devices, modes, and telemetry from the server side.
+                    </div>
+                </div>
+                <div class="content-header-actions">
+                    <div class="badge-dot">
+                        <span class="dot"></span>
+                        <span>System online</span>
+                    </div>
+                    <button class="btn btn-quiet btn-icon" title="Refresh now" onclick="refreshDashboard()">
+                        <i class="fas fa-rotate"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Devices Console View -->
+            <section id="view-console">
+                <div class="console-layout">
+                    <!-- Left: table of devices -->
+                    <div class="section-card">
+                        <div class="section-title-bar">
+                            <div>
+                                <h3>Devices</h3>
+                                <span>List of all registered devices with current status.</span>
+                            </div>
+                            <div>
+                                <button class="btn btn-primary" onclick="refreshDashboard()">
+                                    <i class="fas fa-rotate"></i>
+                                    <span>Refresh</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Filters / search -->
+                        <div class="console-toolbar">
+                            <div class="input-icon-wrapper">
+                                <i class="fas fa-magnifying-glass"></i>
+                                <input id="deviceSearch" type="text" placeholder="Search by name or id"
+                                       oninput="applyDeviceFilters()">
+                            </div>
+                            <select id="deviceStatusFilter" class="input input-select" onchange="applyDeviceFilters()">
+                                <option value="all">Status: All</option>
+                                <option value="online">Online</option>
+                                <option value="offline">Offline</option>
+                                <option value="maintenance">Maintenance</option>
+                            </select>
+                            <select id="deviceModeFilter" class="input input-select" onchange="applyDeviceFilters()">
+                                <option value="all">Mode: All</option>
+                                <option value="production">Production</option>
+                                <option value="development">Development</option>
+                            </select>
+                        </div>
+
+                        <!-- Devices table -->
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                <tr>
+                                    <th>Device</th>
+                                    <th>Mode</th>
+                                    <th>Status</th>
+                                    <th>Last seen</th>
+                                    <th>Uptime</th>
+                                    <th>Battery</th>
+                                    <th>Signal</th>
+                                </tr>
+                                </thead>
+                                <tbody id="devicesTableBody">
+                                <tr>
+                                    <td colspan="7" class="muted">Loading devices…</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Right: detail + controls -->
+                    <div class="section-card">
+                        <div class="section-title-bar">
+                            <div>
+                                <h3>Device details</h3>
+                                <span>View configuration and control server behaviour.</span>
+                            </div>
+                        </div>
+                        <div id="deviceDetailPanel" class="detail-panel">
+                            <!-- Placeholder when no device selected -->
+                            <div class="placeholder-panel">
+                                Select a device in the table to see full details and update:
+                                <ul style="margin-top: 6px; padding-left: 18px;">
+                                    <li>Development / production mode</li>
+                                    <li>Whether server accepts heartbeats</li>
+                                    <li>Whether server accepts MQTT telemetry</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="console-footer-note">
+                    Changes are applied on the server via
+                    <code>POST /api/v1/devices/{id}/control</code>.
+                    The server can use these flags to ignore heartbeats and MQTT from development devices.
+                </div>
+            </section>
+
+            <!-- Overview Dashboard View (similar to classic page) -->
+            <section id="view-overview" class="hidden">
+                <div class="section-card">
+                    <div class="section-title-bar">
+                        <div>
+                            <h3>Overview</h3>
+                            <span>High-level status across devices, alerts, and activity.</span>
+                        </div>
+                        <div>
+                            <button class="btn" onclick="refreshDashboard()">
+                                <i class="fas fa-rotate"></i>
+                                <span>Refresh</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Top metrics -->
+                    <div class="overview-grid" id="overviewMetrics">
+                        <div class="metric-card">
+                            <div class="metric-title">Online devices</div>
+                            <div class="metric-value" id="metricOnline">–</div>
+                            <div class="metric-sub">Currently sending heartbeats</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-title">Offline devices</div>
+                            <div class="metric-value" id="metricOffline">–</div>
+                            <div class="metric-sub">No contact in recent period</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-title">Devices with alerts</div>
+                            <div class="metric-value" id="metricAlertDevices">–</div>
+                            <div class="metric-sub">At least one active alert</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-title">Today’s alerts</div>
+                            <div class="metric-value" id="metricAlertsToday">–</div>
+                            <div class="metric-sub">Triggered in the last 24 hours</div>
+                        </div>
+                    </div>
+
+                    <!-- Alerts, activity, stats -->
+                    <div class="overview-main">
+                        <div class="section-card">
+                            <div class="section-title-bar">
+                                <div>
+                                    <h3>Recent alerts</h3>
+                                    <span>Most recent alerts from all devices.</span>
+                                </div>
+                                <div>
+                                    <button class="btn btn-quiet">
+                                        <i class="fas fa-sliders-h"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="list-scroll" id="alertsList">
+                                <div class="alert-item">
+                                    <div class="alert-title-row">
+                                        <span class="alert-title">No data</span>
+                                        <span class="severity-badge severity-low">info</span>
+                                    </div>
+                                    <div class="alert-meta">
+                                        Alerts will appear here when the server returns them.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <div class="section-card">
+                                <div class="section-title-bar">
+                                    <div>
+                                        <h3>Activity feed</h3>
+                                        <span>Latest device and server events.</span>
+                                    </div>
+                                </div>
+                                <div class="list-scroll" id="activityList">
+                                    <div class="activity-item">
+                                        <div class="activity-primary">No activity yet</div>
+                                        <div class="activity-secondary">When available, events will be listed here.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section-card">
+                                <div class="section-title-bar">
+                                    <div>
+                                        <h3>Quick stats</h3>
+                                        <span>Aggregated metrics from the server.</span>
+                                    </div>
+                                </div>
+                                <div id="statsList">
+                                    <div class="stat-list-item">
+                                        <span class="muted">No statistics loaded yet</span>
+                                        <span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<script>
+    /* ========================================================================
+       CONFIG & STATE
+       ======================================================================== */
+    const API_BASE = '/api/v1';
+
+    const state = {
+        dashboard: null,         // last /dashboard payload
+        filteredDevices: [],     // devices after search/filter
+        selectedDeviceId: null,  // currently selected device in console
+        autoRefreshHandle: null,
+        autoRefreshIntervalMs: 1000,
+        detectionsByDevice: {},
+        detectionFilterByDevice: {}
+    };
+
+    /* ========================================================================
+       SIDEBAR TOGGLE AND RESIZE
+       ======================================================================== */
+
+    /**
+     * Toggle the sidebar open/closed.
+     * Collapsed state is persisted in localStorage.
+     */
+    function toggleSidebar() {
+        const shell = document.querySelector('.app-shell');
+        if (!shell) return;
+
+        const collapsed = shell.classList.toggle('sidebar-collapsed');
+        localStorage.setItem('eyedar.sidebarCollapsed', collapsed ? '1' : '0');
+    }
+
+    /**
+     * Initialize sidebar resizer logic:
+     * - Dragging the vertical bar changes the sidebar width.
+     * - Width is clamped and stored in localStorage.
+     */
+    function initSidebarResizer() {
+        const sidebar = document.querySelector('.sidebar');
+        const resizer = document.getElementById('sidebarResizer');
+        const shell = document.querySelector('.app-shell');
+        if (!sidebar || !resizer || !shell) return;
+
+        // Apply saved width if any
+        const savedWidth = localStorage.getItem('eyedar.sidebarWidth');
+        if (savedWidth) {
+            const numeric = parseInt(savedWidth, 10);
+            if (!Number.isNaN(numeric)) {
+                document.documentElement.style.setProperty('--sidebar-width', numeric + 'px');
+            }
+        }
+
+        // Apply saved collapsed state if any
+        const savedCollapsed = localStorage.getItem('eyedar.sidebarCollapsed');
+        if (savedCollapsed === '1') {
+            shell.classList.add('sidebar-collapsed');
+        }
+
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        resizer.addEventListener('mousedown', (e) => {
+            // Do not allow resizing when collapsed
+            if (shell.classList.contains('sidebar-collapsed')) {
+                return;
+            }
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = sidebar.getBoundingClientRect().width;
+            document.body.style.userSelect = 'none';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const deltaX = e.clientX - startX;
+            let newWidth = startWidth + deltaX;
+
+            // Clamp sidebar width
+            const minWidth = 160;
+            const maxWidth = 360;
+            if (newWidth < minWidth) newWidth = minWidth;
+            if (newWidth > maxWidth) newWidth = maxWidth;
+
+            document.documentElement.style.setProperty('--sidebar-width', newWidth + 'px');
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!isResizing) return;
+            isResizing = false;
+            document.body.style.userSelect = '';
+
+            const current = getComputedStyle(document.documentElement)
+                .getPropertyValue('--sidebar-width').trim();
+            const numeric = parseInt(current, 10);
+            if (!Number.isNaN(numeric)) {
+                localStorage.setItem('eyedar.sidebarWidth', numeric);
+            }
+        });
+    }
+
+    /* ========================================================================
+       UTILITIES
+       ======================================================================== */
+
+    // Format timestamp or ISO string into "time ago" string
+    function formatTimeAgo(timestamp) {
+        if (!timestamp) return 'unknown';
+        let ms = typeof timestamp === 'string' ? Date.parse(timestamp) : timestamp;
+        if (Number.isNaN(ms)) return 'unknown';
+
+        const now = Date.now();
+        const diff = now - ms;
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+
+        if (days > 0) return days + 'd ago';
+        if (hours > 0) return hours + 'h ago';
+        if (minutes > 0) return minutes + 'm ago';
+        return 'just now';
+    }
+
+    // Format uptime percentage
+    function formatUptime(value) {
+        if (value === null || value === undefined) return '–';
+        return value.toFixed(1) + '%';
+    }
+
+    // Show toast notification
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-' + type;
+        toast.innerHTML = `
+            <div class="toast-icon">
+                <i class="fas ${
+                    type === 'success' ? 'fa-check' :
+                    type === 'error' ? 'fa-circle-exclamation' :
+                    'fa-info'
+                }"></i>
+            </div>
+            <div class="toast-text">${message}</div>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2500);
+    }
+
+    // Basic GET helper
+    async function apiGet(path) {
+        try {
+            const res = await fetch(API_BASE + path);
+            if (!res.ok) {
+                console.error('GET ' + path + ' failed:', res.status);
+                return null;
+            }
+            return await res.json();
+        } catch (err) {
+            console.error('GET ' + path + ' error:', err);
+            return null;
+        }
+    }
+
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    function triggerDirectDownload(url, filename) {
+        const a = document.createElement('a');
+        a.href = url;
+        if (filename) a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+
+    async function downloadPhotosIndividually(photos) {
+        for (const photo of photos) {
+            triggerDirectDownload(photo.url, photo.filename);
+            await new Promise(resolve => setTimeout(resolve, 120));
+        }
+    }
+
+    async function tryServerDownload(path) {
+        const paths = [path];
+        if (path.endsWith('/')) {
+            paths.push(path.slice(0, -1));
+        } else {
+            paths.push(path + '/');
+        }
+
+        for (const p of paths) {
+            try {
+                const joiner = p.includes('?') ? '&' : '?';
+                const res = await fetch(`${API_BASE}${p}${joiner}_ts=${Date.now()}`);
+                if (!res.ok) continue;
+
+                const blob = await res.blob();
+                const dispo = res.headers.get('content-disposition') || '';
+                const match = dispo.match(/filename=\"?([^\";]+)\"?/i);
+                const filename = match ? match[1] : 'download.bin';
+                downloadBlob(blob, filename);
+                return true;
+            } catch (_) {
+                // Try next path variant.
+            }
+        }
+
+        return false;
+    }
+
+    // POST helper for device control
+    async function apiPostJSON(path, body) {
+        try {
+            const res = await fetch(API_BASE + path, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (!res.ok) {
+                console.error('POST ' + path + ' failed:', res.status);
+                showToast('Failed to update device on server', 'error');
+                return null;
+            }
+            return await res.json().catch(() => ({}));
+        } catch (err) {
+            console.error('POST ' + path + ' error:', err);
+            showToast('Network error while updating device', 'error');
+            return null;
+        }
+    }
+
+    /* ========================================================================
+       VIEW SWITCHING
+       ======================================================================== */
+    function switchView(view, navElement) {
+        // Toggle sidebar active item
+        document.querySelectorAll('.nav-item[data-view]').forEach(el => {
+            el.classList.toggle('active', el === navElement);
+        });
+
+        // Show/hide sections
+        document.getElementById('view-console').classList.toggle('hidden', view !== 'console');
+        document.getElementById('view-overview').classList.toggle('hidden', view !== 'overview');
+
+        // Update titles
+        const titleEl = document.getElementById('viewTitle');
+        const subtitleEl = document.getElementById('viewSubtitle');
+
+        if (view === 'console') {
+            titleEl.textContent = 'Devices Console';
+            subtitleEl.textContent = 'Manage devices, modes, and telemetry from the server side.';
+        } else {
+            titleEl.textContent = 'Overview Dashboard';
+            subtitleEl.textContent = 'Visual summary of devices, alerts, and activity.';
+        }
+
+        // Close mobile sidebar after a navigation tap.
+        if (window.matchMedia('(max-width: 768px)').matches) {
+            const shell = document.querySelector('.app-shell');
+            shell?.classList.add('sidebar-collapsed');
+        }
+    }
+
+    /* ========================================================================
+       DASHBOARD REFRESH
+       ======================================================================== */
+    async function refreshDashboard(skipDetailUpdate = false) {
+        const data = await apiGet('/dashboard');
+        if (!data) {
+            showToast('Failed to load dashboard from server', 'error');
+            return;
+        }
+
+        state.dashboard = data;
+
+        // Update console view
+        renderDevicesConsole();
+
+        // Update overview view
+        renderOverviewDashboard();
+
+        // Update header timestamp
+        document.getElementById('lastUpdated').textContent =
+            'Last update: ' + new Date().toLocaleTimeString();
+
+        // Only update device detail panel if explicitly requested (not during auto-refresh)
+        // This prevents "Last seen" from constantly updating during auto-refresh
+        if (!skipDetailUpdate && state.selectedDeviceId !== null) {
+            updateSelectedDeviceDetail(false); // Pass false to skip photo reload
+        }
+    }
+
+    function startAutoRefresh() {
+        if (state.autoRefreshHandle) clearInterval(state.autoRefreshHandle);
+        state.autoRefreshHandle = setInterval(() => refreshDashboard(true), state.autoRefreshIntervalMs);
+    }
+
+    /* ========================================================================
+       DEVICES CONSOLE RENDERING
+       ======================================================================== */
+    function applyDeviceFilters() {
+        if (!state.dashboard || !state.dashboard.device_health) return;
+        const rawDevices = state.dashboard.device_health;
+
+        const search = document.getElementById('deviceSearch').value.trim().toLowerCase();
+        const statusFilter = document.getElementById('deviceStatusFilter').value;
+        const modeFilter = document.getElementById('deviceModeFilter').value;
+
+        state.filteredDevices = rawDevices.filter(d => {
+            const nameMatch =
+                !search ||
+                (d.device_name && d.device_name.toLowerCase().includes(search)) ||
+                String(d.device_id).includes(search);
+
+            const statusMatch =
+                statusFilter === 'all' || (d.status && d.status.toLowerCase() === statusFilter);
+
+            const modeValue = (d.mode || 'production').toLowerCase();
+            const modeMatch = modeFilter === 'all' || modeValue === modeFilter;
+
+            return nameMatch && statusMatch && modeMatch;
+        });
+
+        renderDevicesTable();
+    }
+
+    function renderDevicesConsole() {
+        if (!state.dashboard || !state.dashboard.device_health) {
+            const tbody = document.getElementById('devicesTableBody');
+            tbody.innerHTML = `<tr><td colspan="7" class="muted">No device data available</td></tr>`;
+            return;
+        }
+
+        // Prepare filtered list via filters
+        applyDeviceFilters();
+    }
+
+    function renderDevicesTable() {
+        const tbody = document.getElementById('devicesTableBody');
+        const devices = state.filteredDevices;
+
+        if (!devices || devices.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="muted">No devices match the filter</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = devices.map(d => {
+            const mode = (d.mode || 'production').toLowerCase();
+            const status = (d.status || 'offline').toLowerCase();
+
+            const modeClass = mode === 'development' ? 'mode-pill dev' : 'mode-pill prod';
+            const modeLabel = mode === 'development' ? 'Development' : 'Production';
+
+            let statusClass = 'status-offline';
+            if (status === 'online') statusClass = 'status-online';
+            else if (status === 'maintenance') statusClass = 'status-maintenance';
+
+            return `
+                <tr class="row-selectable" onclick="selectDevice(${d.device_id})">
+                    <td>
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                            <span>${d.device_name || 'Device ' + d.device_id}</span>
+                            <span class="muted">#${d.device_id}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="${modeClass}">
+                            <i class="fas ${mode === 'development' ? 'fa-code' : 'fa-shield-alt'}"></i>
+                            <span>${modeLabel}</span>
+                        </span>
+                    </td>
+                    <td>
+                        <span class="status-pill ${statusClass}">
+                            <span>${status}</span>
+                        </span>
+                    </td>
+                    <td>${formatTimeAgo(d.last_seen)}</td>
+                    <td>${formatUptime(d.uptime_percentage ?? 0)}</td>
+                    <td>${d.battery_level ?? '–'}%</td>
+                    <td>${d.signal_strength ?? '–'}%</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function selectDevice(deviceId) {
+        state.selectedDeviceId = deviceId;
+        updateSelectedDeviceDetail();
+    }
+
+    function updateSelectedDeviceDetail(reloadPhotos = true) {
+        if (!state.dashboard || !state.dashboard.device_health) return;
+        const allDevices = state.dashboard.device_health;
+        const device = allDevices.find(d => d.device_id === state.selectedDeviceId);
+
+        const panel = document.getElementById('deviceDetailPanel');
+        if (!device) {
+            panel.innerHTML = `
+                <div class="placeholder-panel">
+                    Device #${state.selectedDeviceId} is not present in current dashboard data.
+                </div>
+            `;
+            return;
+        }
+
+        const mode = (device.mode || 'production').toLowerCase();
+        const isDev = mode === 'development';
+        const heartbeatEnabled = device.heartbeat_enabled !== false;
+        const mqttEnabled = device.mqtt_enabled !== false;
+
+        // If not reloading photos, only update dynamic values without rebuilding entire panel
+        if (!reloadPhotos && panel.querySelector('.detail-header')) {
+            // Update only dynamic text values
+            const lastSeenEl = panel.querySelector('.detail-item-value:nth-of-type(2)');
+            if (lastSeenEl) lastSeenEl.textContent = formatTimeAgo(device.last_seen);
+            
+            const uptimeEl = panel.querySelector('.detail-item-value:nth-of-type(3)');
+            if (uptimeEl) uptimeEl.textContent = formatUptime(device.uptime_percentage ?? 0);
+            
+            const batteryEl = panel.querySelector('.detail-item-value:nth-of-type(4)');
+            if (batteryEl) batteryEl.textContent = `${device.battery_level ?? '–'}%`;
+            
+            const signalEl = panel.querySelector('.detail-item-value:nth-of-type(5)');
+            if (signalEl) signalEl.textContent = `${device.signal_strength ?? '–'}%`;
+            
+            const cpuRamEl = panel.querySelector('.detail-item-value:nth-of-type(6)');
+            if (cpuRamEl) cpuRamEl.textContent = `${device.cpu_usage ?? '–'}% / ${device.memory_usage ?? '–'}%`;
+            
+            // Update toggle states
+            const devModeToggle = document.getElementById('toggleDevMode');
+            if (devModeToggle) devModeToggle.checked = isDev;
+            
+            const heartbeatToggle = document.getElementById('toggleHeartbeat');
+            if (heartbeatToggle) heartbeatToggle.checked = heartbeatEnabled;
+            
+            const mqttToggle = document.getElementById('toggleMqtt');
+            if (mqttToggle) mqttToggle.checked = mqttEnabled;
+            
+            return; // Exit early, don't rebuild panel
+        }
+
+        // Full rebuild (when reloadPhotos=true or panel is empty)
+        panel.innerHTML = `
+            <div class="detail-header">
+                <div class="detail-header-main">
+                    <div class="detail-title">
+                        ${device.device_name || 'Device ' + device.device_id}
+                    </div>
+                    <div class="detail-meta">
+                        ID #${device.device_id} · Firmware ${device.firmware_version || 'unknown'}
+                    </div>
+                </div>
+                <div>
+                    <span class="mode-pill ${isDev ? 'dev' : 'prod'}">
+                        <i class="fas ${isDev ? 'fa-code' : 'fa-shield-alt'}"></i>
+                        <span>${isDev ? 'Development' : 'Production'}</span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="detail-grid">
+                <div>
+                    <div class="detail-item-label">Status</div>
+                    <div class="detail-item-value">${device.status || 'unknown'}</div>
+                </div>
+                <div>
+                    <div class="detail-item-label">Last seen</div>
+                    <div class="detail-item-value">${formatTimeAgo(device.last_seen)}</div>
+                </div>
+                <div>
+                    <div class="detail-item-label">Uptime</div>
+                    <div class="detail-item-value">${formatUptime(device.uptime_percentage ?? 0)}</div>
+                </div>
+                <div>
+                    <div class="detail-item-label">Battery</div>
+                    <div class="detail-item-value">${device.battery_level ?? '–'}%</div>
+                </div>
+                <div>
+                    <div class="detail-item-label">Signal</div>
+                    <div class="detail-item-value">${device.signal_strength ?? '–'}%</div>
+                </div>
+                <div>
+                    <div class="detail-item-label">CPU / RAM</div>
+                    <div class="detail-item-value">
+                        ${device.cpu_usage ?? '–'}% / ${device.memory_usage ?? '–'}%
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top:8px; border-top:1px solid var(--border-subtle); padding-top:8px;">
+                <div class="switch-row">
+                    <div class="switch-row-main">
+                        <strong>Development mode</strong>
+                        <span>
+                            <strong>Development:</strong> For testing and debugging.<br>
+                            <strong>Production:</strong> Heartbeats enabled by default (required for offline detection).
+                        </span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="toggleDevMode"
+                               ${isDev ? 'checked' : ''}
+                               onchange="onToggleDevMode(${device.device_id})">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="switch-row">
+                    <div class="switch-row-main">
+                        <strong>Heartbeat monitoring</strong>
+                        <span>
+                            Heartbeat required for offline detection (2-hour threshold).
+                            <br><strong>Note:</strong> Should remain enabled in production.
+                        </span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="toggleHeartbeat"
+                               ${heartbeatEnabled ? 'checked' : ''}
+                               onchange="onToggleHeartbeat(${device.device_id})">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="switch-row">
+                    <div class="switch-row-main">
+                        <strong>Accept MQTT telemetry</strong>
+                        <span>
+                            If disabled, the server ignores MQTT messages from this device.
+                        </span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="toggleMqtt"
+                               ${mqttEnabled ? 'checked' : ''}
+                               onchange="onToggleMqtt(${device.device_id})">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div style="margin-top:8px; border-top:1px solid var(--border-subtle); padding-top:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <strong style="font-size:12px;">Device Control</strong>
+                </div>
+                <button class="btn btn-danger" onclick="restartDevice(${device.device_id})" style="width:100%; margin-bottom:8px;">
+                    <i class="fas fa-power-off"></i> Restart Device
+                </button>
+            </div>
+
+            <div style="margin-top:8px; border-top:1px solid var(--border-subtle); padding-top:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <strong style="font-size:12px;">Recent Photos</strong>
+                    <div style="display:flex; gap:6px;">
+                        <button class="btn btn-quiet" onclick="downloadDevicePhotoFolder(${device.device_id})" style="font-size:11px;" title="Download all device photos">
+                            <i class="fas fa-file-archive"></i>
+                        </button>
+                        <button class="btn btn-quiet" onclick="openAllPhotosModal(${device.device_id})" style="font-size:11px;" title="View all photos">
+                            <i class="fas fa-images"></i>
+                        </button>
+                        <button class="btn btn-quiet" onclick="refreshDevicePhotos(${device.device_id})" style="font-size:11px;">
+                            <i class="fas fa-rotate"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="devicePhotos${device.device_id}" class="photo-gallery">
+                    <div style="font-size:11px; color:var(--text-secondary); padding:10px;">
+                        Loading photos...
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top:8px; border-top:1px solid var(--border-subtle); padding-top:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <strong style="font-size:12px;">Detection Feed (CSV)</strong>
+                    <div style="display:flex; gap:6px;">
+                        <button class="btn btn-quiet" onclick="downloadDeviceDetectionsBundle(${device.device_id})" style="font-size:11px;" title="Download CSV and grouped photos (PIR/MW) as ZIP">
+                            <i class="fas fa-file-archive"></i>
+                        </button>
+                        <button class="btn btn-quiet" onclick="downloadDetectionsCsv(${device.device_id})" style="font-size:11px;" title="Download alerts CSV">
+                            <i class="fas fa-file-csv"></i>
+                        </button>
+                        <button class="btn btn-quiet" onclick="refreshDeviceDetections(${device.device_id})" style="font-size:11px;">
+                            <i class="fas fa-rotate"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="detection-tabs" id="deviceDetectionTabs${device.device_id}">
+                    <button class="detection-tab active" onclick="setDetectionFilter(${device.device_id}, 'all', this)">All</button>
+                    <button class="detection-tab" onclick="setDetectionFilter(${device.device_id}, 'pir', this)">PIR</button>
+                    <button class="detection-tab" onclick="setDetectionFilter(${device.device_id}, 'mw', this)">MW</button>
+                </div>
+                <div id="deviceDetections${device.device_id}" class="detection-feed">
+                    <div style="font-size:11px; color:var(--text-secondary); padding:10px;">
+                        Loading detections...
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Only load photos if requested (not during auto-refresh)
+        if (reloadPhotos) {
+            loadDevicePhotos(device.device_id);
+            loadDeviceDetections(device.device_id);
+        }
+    }
+
+    /* ========================================================================
+       DEVICE CONTROL HANDLERS
+       ======================================================================== */
+    async function loadDevicePhotos(deviceId) {
+        const photosContainer = document.getElementById(`devicePhotos${deviceId}`);
+        if (!photosContainer) return;
+
+        const data = await apiGet(`/dashboard/devices/${deviceId}/photos`);
+        if (!data || !data.photos || data.photos.length === 0) {
+            photosContainer.innerHTML = `
+                <div style="font-size:11px; color:var(--text-secondary); padding:10px;">
+                    No photos available for this device
+                </div>
+            `;
+            return;
+        }
+
+        photosContainer.innerHTML = data.photos.slice(0, 12).map(photo => {
+            const date = new Date(photo.modified.secs_since_epoch * 1000);
+            const timeStr = formatTimeAgo(photo.modified.secs_since_epoch * 1000);
+            return `
+                <div class="photo-item" onclick="showPhotoModal('${photo.url}', '${photo.filename}')">
+                    <img src="${photo.url}" alt="${photo.filename}" loading="lazy">
+                    <div class="photo-item-info">
+                        ${timeStr}
+                        <div>
+                            <a href="${photo.url}" download="${photo.filename}" onclick="event.stopPropagation()" style="color:inherit; text-decoration:underline; font-size:10px;">Download</a>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        if (data.photos.length > 12) {
+            photosContainer.innerHTML += `
+                <div style="grid-column: 1/-1; font-size:11px; color:var(--text-secondary); text-align:center; padding:6px;">
+                    ${data.photos.length - 12} more photos available
+                </div>
+            `;
+        }
+    }
+
+    async function refreshDevicePhotos(deviceId) {
+        await loadDevicePhotos(deviceId);
+        showToast('Photos refreshed', 'success');
+    }
+
+    function normalizeDetectionSensor(item) {
+        const raw = (item?.sensor_source || '').toLowerCase().trim();
+        if (raw && raw !== 'unknown' && raw !== 'n/a') {
+            if (raw.includes('pir')) return 'pir';
+            if (raw === 'mw' || raw.includes('microwave')) return 'mw';
+            if (raw.includes('hourly') || raw.includes('alive')) return 'hourly_alive';
+            return raw;
+        }
+
+        const msg = (item?.message || '').toLowerCase();
+        if (msg.includes('sensor_event:pir') || msg.includes('pir')) return 'pir';
+        if (msg.includes('sensor_event:mw') || msg.includes('microwave') || msg.includes(' mw')) return 'mw';
+        if (msg.includes('hourly') || msg.includes('alive')) return 'hourly_alive';
+        return 'unknown';
+    }
+
+    function matchesDetectionFilter(item, filterKey) {
+        if (filterKey === 'all') return true;
+        const sensor = normalizeDetectionSensor(item);
+        if (filterKey === 'pir') return sensor.includes('pir');
+        if (filterKey === 'mw') return sensor === 'mw' || sensor.includes('microwave');
+        return true;
+    }
+
+    function renderDeviceDetections(deviceId) {
+        const container = document.getElementById(`deviceDetections${deviceId}`);
+        if (!container) return;
+
+        const detections = state.detectionsByDevice[deviceId] || [];
+        const filterKey = state.detectionFilterByDevice[deviceId] || 'all';
+        const filtered = detections.filter(item => matchesDetectionFilter(item, filterKey));
+
+        if (!filtered.length) {
+            const label = filterKey.toUpperCase();
+            container.innerHTML = `
+                <div style="font-size:11px; color:var(--text-secondary); padding:10px;">
+                    ${filterKey === 'all' ? 'No detections in CSV for this device yet' : `No ${label} detections for this device`}
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = filtered.slice(0, 30).map(item => {
+            const timeText = formatTimeAgo(item.timestamp);
+            const sensor = normalizeDetectionSensor(item).toUpperCase();
+            const imageBlock = item.image_url
+                ? `<img class="detection-thumb" src="${item.image_url}" alt="detection image" loading="lazy"
+                        onclick="showPhotoModal('${item.image_url}', 'detection_${deviceId}')">`
+                : `<div class="detection-thumb" style="display:flex; align-items:center; justify-content:center; font-size:10px; color:#6b7280;">No image</div>`;
+
+            const pathText = item.image_path || 'no image path';
+
+            return `
+                <div class="detection-row">
+                    <div>${imageBlock}</div>
+                    <div>
+                        <div class="detection-meta-line">
+                            <span class="detection-sensor">${sensor}</span>
+                            <span>${timeText}</span>
+                        </div>
+                        <div class="detection-message">${item.message || 'Detection event'}</div>
+                        <div class="detection-path">${pathText}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function setDetectionFilter(deviceId, filterKey, buttonEl) {
+        state.detectionFilterByDevice[deviceId] = filterKey;
+
+        const tabs = document.getElementById(`deviceDetectionTabs${deviceId}`);
+        if (tabs) {
+            tabs.querySelectorAll('.detection-tab').forEach(btn => btn.classList.remove('active'));
+        }
+        if (buttonEl) {
+            buttonEl.classList.add('active');
+        }
+
+        renderDeviceDetections(deviceId);
+    }
+
+    async function loadDeviceDetections(deviceId) {
+        const container = document.getElementById(`deviceDetections${deviceId}`);
+        if (!container) return;
+
+        const data = await apiGet(`/dashboard/devices/${deviceId}/detections`);
+        state.detectionsByDevice[deviceId] = data?.detections || [];
+        if (!state.detectionFilterByDevice[deviceId]) {
+            state.detectionFilterByDevice[deviceId] = 'all';
+        }
+        renderDeviceDetections(deviceId);
+    }
+
+    async function refreshDeviceDetections(deviceId) {
+        await loadDeviceDetections(deviceId);
+        showToast('Detections refreshed', 'success');
+    }
+
+    async function downloadDetectionsCsv(deviceId) {
+        const ok = await tryServerDownload('/dashboard/download/csv');
+        if (ok) return;
+
+        const data = await apiGet(`/dashboard/devices/${deviceId}/detections`);
+        const detections = data?.detections || [];
+        if (!detections.length) {
+            showToast('No detections available for CSV export', 'info');
+            return;
+        }
+
+        const esc = (v) => `"${String(v || '').replaceAll('"', '""')}"`;
+        const rows = ['device_id,timestamp,sensor_source,message,image_path'];
+        for (const item of detections) {
+            rows.push([
+                item.device_id,
+                esc(item.timestamp || ''),
+                esc(normalizeDetectionSensor(item)),
+                esc(item.message || ''),
+                esc(item.image_path || ''),
+            ].join(','));
+        }
+
+        downloadBlob(
+            new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8' }),
+            `device_${deviceId}_detections.csv`
+        );
+        showToast('CSV downloaded (client fallback)', 'success');
+    }
+
+    async function downloadDeviceDetectionsBundle(deviceId) {
+        const serverBundleOk = await tryServerDownload(`/dashboard/devices/${deviceId}/detections/download-bundle`);
+        if (serverBundleOk) {
+            return;
+        }
+
+        if (!window.JSZip) {
+            showToast('Bundle ZIP unavailable right now', 'error');
+            return;
+        }
+
+        const data = await apiGet(`/dashboard/devices/${deviceId}/detections`);
+        const detections = data?.detections || [];
+        if (!detections.length) {
+            showToast('No detections to export for this device', 'info');
+            return;
+        }
+
+        showToast('Preparing detections ZIP...', 'info');
+
+        const zip = new window.JSZip();
+        const detectionsFolder = zip.folder('detections');
+        const photosFolder = zip.folder('photos');
+        const pirFolder = photosFolder.folder('pir');
+        const mwFolder = photosFolder.folder('mw');
+        const otherFolder = photosFolder.folder('other');
+
+        const csvRows = ['device_id,timestamp,sensor_source,message,image_path,image_filename'];
+        let addedPhotos = 0;
+
+        for (let i = 0; i < detections.length; i++) {
+            const item = detections[i];
+            const sensor = normalizeDetectionSensor(item);
+            const imagePath = item.image_path || '';
+            const imageName = imagePath ? imagePath.split('/').pop() : '';
+
+            const esc = (v) => `"${String(v || '').replaceAll('"', '""')}"`;
+            csvRows.push([
+                item.device_id,
+                esc(item.timestamp || ''),
+                esc(sensor),
+                esc(item.message || ''),
+                esc(imagePath),
+                esc(imageName),
+            ].join(','));
+
+            if (!item.image_url) {
+                continue;
+            }
+
+            try {
+                const res = await fetch(item.image_url);
+                if (!res.ok) {
+                    continue;
+                }
+
+                const buf = await res.arrayBuffer();
+                const safeName = `${String(i + 1).padStart(3, '0')}_${imageName || `image_${i + 1}.jpg`}`;
+
+                if (sensor === 'pir') {
+                    pirFolder.file(safeName, buf);
+                } else if (sensor === 'mw') {
+                    mwFolder.file(safeName, buf);
+                } else {
+                    otherFolder.file(safeName, buf);
+                }
+                addedPhotos++;
+            } catch (_) {
+                // Keep CSV row even if image fetch fails.
+            }
+        }
+
+        detectionsFolder.file(`device_${deviceId}_detections.csv`, csvRows.join('\n'));
+        zip.file(
+            'README.txt',
+            `Device ${deviceId} detection export\nRows: ${detections.length}\nPhotos added: ${addedPhotos}\nFolders: photos/pir, photos/mw, photos/other\n`
+        );
+
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `device_${deviceId}_detections_bundle.zip`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+
+        showToast(`Downloaded detections bundle (${addedPhotos} photos)`, 'success');
+    }
+
+    async function downloadDevicePhotoFolder(deviceId) {
+        const serverZipOk = await tryServerDownload(`/dashboard/devices/${deviceId}/photos/download-all`);
+        if (serverZipOk) {
+            return;
+        }
+
+        const data = await apiGet(`/dashboard/devices/${deviceId}/photos`);
+        const photos = data?.photos || [];
+        if (!photos.length) {
+            showToast('No photos to download for this device', 'info');
+            return;
+        }
+
+        const detectionsData = await apiGet(`/dashboard/devices/${deviceId}/detections`);
+        const detections = detectionsData?.detections || [];
+        const sensorByFilename = new Map();
+        for (const row of detections) {
+            const imagePath = row?.image_path || '';
+            const filename = imagePath.split('/').pop();
+            if (!filename) continue;
+            sensorByFilename.set(filename, normalizeDetectionSensor(row));
+        }
+
+        if (!window.JSZip) {
+            showToast('Photo ZIP unavailable right now', 'error');
+            return;
+        }
+
+        showToast('Preparing grouped photo ZIP...', 'info');
+        const zip = new window.JSZip();
+        const pirFolder = zip.folder('pir');
+        const mwFolder = zip.folder('mw');
+        const allFolder = zip.folder('all');
+
+        for (const photo of photos) {
+            try {
+                const res = await fetch(photo.url);
+                if (!res.ok) continue;
+                const bytes = await res.arrayBuffer();
+
+                const filename = photo.filename || `photo_${Date.now()}.jpg`;
+                const sensor = sensorByFilename.get(filename) || 'unknown';
+                if (sensor === 'pir') {
+                    pirFolder.file(filename, bytes);
+                } else if (sensor === 'mw') {
+                    mwFolder.file(filename, bytes);
+                } else {
+                    allFolder.file(filename, bytes);
+                }
+            } catch (_) {
+                // Skip failed image fetches and continue packing remaining files.
+            }
+        }
+
+        const blob = await zip.generateAsync({ type: 'blob' });
+        downloadBlob(blob, `device_${deviceId}_photos_grouped.zip`);
+        showToast('Grouped photo ZIP downloaded (pir/mw/all)', 'success');
+    }
+
+    async function openAllPhotosModal(deviceId) {
+        const modal = document.getElementById('allPhotosModal');
+        const gallery = document.getElementById('allPhotosGallery');
+        const title = document.getElementById('allPhotosTitle');
+        
+        if (!modal || !gallery) return;
+
+        // Update title
+        const device = state.dashboard?.device_health?.find(d => d.device_id === deviceId);
+        title.textContent = `All Photos - ${device?.device_name || 'Device ' + deviceId}`;
+        
+        // Show loading state
+        gallery.innerHTML = `
+            <div style="grid-column: 1/-1; font-size:12px; color:var(--text-secondary); text-align:center; padding:20px;">
+                <i class="fas fa-spinner fa-spin"></i> Loading photos...
+            </div>
+        `;
+        
+        // Show modal
+        modal.classList.add('active');
+        
+        // Load all photos
+        const data = await apiGet(`/dashboard/devices/${deviceId}/photos`);
+        
+        if (!data || !data.photos || data.photos.length === 0) {
+            gallery.innerHTML = `
+                <div style="grid-column: 1/-1; font-size:12px; color:var(--text-secondary); text-align:center; padding:20px;">
+                    No photos available for this device
+                </div>
+            `;
+            return;
+        }
+
+        // Render all photos with timestamps
+        gallery.innerHTML = data.photos.map(photo => {
+            const timeStr = formatTimeAgo(photo.modified.secs_since_epoch * 1000);
+            return `
+                <div class="all-photo-item" onclick="showPhotoModal('${photo.url}', '${photo.filename}')">
+                    <img src="${photo.url}" alt="${photo.filename}" loading="lazy">
+                    <div class="all-photo-item-time">${timeStr}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function closeAllPhotosModal() {
+        const modal = document.getElementById('allPhotosModal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+    }
+
+    function showPhotoModal(url, filename) {
+        let modal = document.getElementById('photoModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'photoModal';
+            modal.className = 'photo-modal';
+            modal.innerHTML = `
+                <div class="photo-modal-content">
+                    <button class="photo-modal-close" onclick="closePhotoModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <img id="photoModalImg" src="" alt="">
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Close modal when clicking outside
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closePhotoModal();
+                }
+            });
+        }
+
+        document.getElementById('photoModalImg').src = url;
+        modal.classList.add('active');
+    }
+
+    function closePhotoModal() {
+        const modal = document.getElementById('photoModal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+    }
+
+    async function onToggleDevMode(deviceId) {
+        const checked = document.getElementById('toggleDevMode').checked;
+        const newMode = checked ? 'development' : 'production';
+        
+        // Automatically set heartbeat based on mode
+        const heartbeatEnabled = checked; // dev=true, prod=false
+        
+        const payload = { 
+            mode: newMode,
+            heartbeat_enabled: heartbeatEnabled
+        };
+        
+        const result = await apiPostJSON(`/devices/${deviceId}/control`, payload);
+        if (result) {
+            await refreshDashboard();
+            const modeLabel = checked ? 'development' : 'production';
+            const heartbeatStatus = heartbeatEnabled ? 'enabled' : 'disabled';
+            showToast(`Device switched to ${modeLabel} mode (heartbeat ${heartbeatStatus})`, 'success');
+        }
+    }
+
+    async function onToggleHeartbeat(deviceId) {
+        const checked = document.getElementById('toggleHeartbeat').checked;
+        const payload = { heartbeat_enabled: checked };
+        const result = await apiPostJSON(`/devices/${deviceId}/control`, payload);
+        if (result) {
+            await refreshDashboard();
+            showToast(`Heartbeat ${checked ? 'enabled' : 'disabled'}`, 'success');
+        }
+    }
+
+    async function onToggleMqtt(deviceId) {
+        const checked = document.getElementById('toggleMqtt').checked;
+        const payload = { mqtt_enabled: checked };
+        const result = await apiPostJSON(`/devices/${deviceId}/control`, payload);
+        if (result) {
+            await refreshDashboard();
+            showToast(`MQTT ${checked ? 'enabled' : 'disabled'}`, 'success');
+        }
+    }
+
+    /* ========================================================================
+       DEVICE RESTART HANDLER
+       ======================================================================== */
+    async function restartDevice(deviceId) {
+        // Create confirmation modal
+        let modal = document.getElementById('restartModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'restartModal';
+            modal.className = 'photo-modal';
+            modal.style.zIndex = '10000';
+            document.body.appendChild(modal);
+        }
+
+        let countdown = 3;
+        const updateModal = () => {
+            modal.innerHTML = `
+                <div class="photo-modal-content" style="max-width:400px; padding:24px; text-align:center;">
+                    <h3 style="margin:0 0 16px 0; color:var(--color-danger);">
+                        <i class="fas fa-exclamation-triangle"></i> Restart Device?
+                    </h3>
+                    <p style="margin:0 0 24px 0; color:var(--text-secondary);">
+                        Device <strong>#${deviceId}</strong> will restart immediately.
+                        <br>This may take 10-30 seconds to reconnect.
+                    </p>
+                    <div style="display:flex; gap:12px; justify-content:center;">
+                        <button class="btn btn-secondary" onclick="closeRestartModal()" style="flex:1;">
+                            Cancel
+                        </button>
+                        <button id="confirmRestartBtn" class="btn btn-danger" style="flex:1;" disabled>
+                            <i class="fas fa-power-off"></i> Restart (${countdown}s)
+                        </button>
+                    </div>
+                </div>
+            `;
+            modal.style.display = 'flex';
+        };
+
+        updateModal();
+
+        // Countdown timer
+        const interval = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                updateModal();
+            } else {
+                clearInterval(interval);
+                // Enable button after countdown
+                const btn = document.getElementById('confirmRestartBtn');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Restart Now';
+                    btn.onclick = async () => {
+                        closeRestartModal();
+                        await executeRestart(deviceId);
+                    };
+                }
+            }
+        }, 1000);
+    }
+
+    async function executeRestart(deviceId) {
+        showToast('Sending restart command...', 'info');
+        
+        try {
+            const response = await fetch(`${API_BASE}/devices/${deviceId}/restart`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const responseText = await response.text();
+            console.log('Restart response:', response.status, responseText);
+
+            if (response.ok) {
+                showToast(`Device #${deviceId} restart command sent via MQTT`, 'success');
+            } else {
+                let errorMsg = 'Unknown error';
+                try {
+                    const error = JSON.parse(responseText);
+                    errorMsg = error.error || errorMsg;
+                } catch (e) {
+                    errorMsg = responseText || `HTTP ${response.status}`;
+                }
+                showToast(`Failed to restart: ${errorMsg}`, 'error');
+            }
+        } catch (err) {
+            console.error('Restart error:', err);
+            showToast(`Network error: ${err.message}`, 'error');
+        }
+    }
+
+    function closeRestartModal() {
+        const modal = document.getElementById('restartModal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.remove();
+        }
+    }
+
+    /* ========================================================================
+       OVERVIEW DASHBOARD RENDERING
+       ======================================================================== */
+    function renderOverviewDashboard() {
+        const data = state.dashboard;
+        if (!data) return;
+
+        const overview = data.overview || {};
+        document.getElementById('metricOnline').textContent = overview.online_devices ?? '–';
+        document.getElementById('metricOffline').textContent = overview.offline_devices ?? '–';
+        document.getElementById('metricAlertDevices').textContent = overview.devices_with_alerts ?? '–';
+        document.getElementById('metricAlertsToday').textContent = overview.total_alerts_today ?? '–';
+
+        // Alerts
+        const alertsContainer = document.getElementById('alertsList');
+        const alerts = data.recent_alerts || [];
+        if (!alerts.length) {
+            alertsContainer.innerHTML = `
+                <div class="alert-item">
+                    <div class="alert-title-row">
+                        <span class="alert-title">No alerts</span>
+                        <span class="severity-badge severity-low">info</span>
+                    </div>
+                    <div class="alert-meta">
+                        No recent alerts received from devices.
+                    </div>
+                </div>
+            `;
+        } else {
+            alertsContainer.innerHTML = alerts.map(a => {
+                const severityLower = (a.severity || 'low').toLowerCase();
+                const badgeClass = 'severity-' + severityLower;
+                return `
+                    <div class="alert-item">
+                        <div class="alert-title-row">
+                            <span class="alert-title">
+                                ${a.device_name || 'Device ' + a.device_id}
+                            </span>
+                            <span class="severity-badge ${badgeClass}">
+                                ${severityLower}
+                            </span>
+                        </div>
+                        <div class="alert-meta">
+                            ${a.message || 'Alert'} · ${formatTimeAgo(a.timestamp)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Activity feed
+        const activityContainer = document.getElementById('activityList');
+        const activity = data.activity_feed || [];
+        if (!activity.length) {
+            activityContainer.innerHTML = `
+                <div class="activity-item">
+                    <div class="activity-primary">No activity yet</div>
+                    <div class="activity-secondary">Activity will appear when the server returns it.</div>
+                </div>
+            `;
+        } else {
+            activityContainer.innerHTML = activity.map(ev => {
+                const ts = ev.timestamp || ev.time;
+                return `
+                    <div class="activity-item">
+                        <div class="activity-primary">${ev.title || 'Event'}</div>
+                        <div class="activity-secondary">${formatTimeAgo(ts)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Quick stats
+        const statsContainer = document.getElementById('statsList');
+        const stats = data.quick_stats;
+        if (!stats) {
+            statsContainer.innerHTML = `
+                <div class="stat-list-item">
+                    <span class="muted">No statistics loaded</span>
+                    <span></span>
+                </div>
+            `;
+        } else {
+            let items = [];
+            if (Array.isArray(stats)) {
+                items = stats.map(s => ({
+                    label: s.label || 'Metric',
+                    value: s.value ?? '–'
+                }));
+            } else if (typeof stats === 'object') {
+                items = Object.keys(stats).map(key => ({
+                    label: key.replace(/_/g, ' '),
+                    value: stats[key]
+                }));
+            }
+
+            if (!items.length) {
+                statsContainer.innerHTML = `
+                    <div class="stat-list-item">
+                        <span class="muted">No statistics loaded</span>
+                        <span></span>
+                    </div>
+                `;
+            } else {
+                statsContainer.innerHTML = items.map(s => `
+                    <div class="stat-list-item">
+                        <span>${s.label}</span>
+                        <span>${s.value}</span>
+                    </div>
+                `).join('');
+            }
+        }
+    }
+
+    /* ========================================================================
+       INITIALIZATION
+       ======================================================================== */
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize sidebar resize and restore state
+        initSidebarResizer();
+
+        // Keep sidebar collapsed by default on phones for more content space.
+        if (window.matchMedia('(max-width: 768px)').matches) {
+            document.querySelector('.app-shell')?.classList.add('sidebar-collapsed');
+        }
+
+        // Tapping main content on phones closes the sidebar if it is open.
+        const content = document.querySelector('.content');
+        content?.addEventListener('click', () => {
+            if (!window.matchMedia('(max-width: 768px)').matches) return;
+            const shell = document.querySelector('.app-shell');
+            if (shell && !shell.classList.contains('sidebar-collapsed')) {
+                shell.classList.add('sidebar-collapsed');
+            }
+        });
+
+        // Default to console view; sidebar already marks it as active
+        switchView('console', document.querySelector('.nav-item[data-view="console"]'));
+
+        // Initial dashboard load and auto-refresh
+        refreshDashboard();
+        startAutoRefresh();
+    });
+</script>
+
+<!-- All Photos Gallery Modal -->
+<div class="all-photos-modal" id="allPhotosModal">
+    <div class="all-photos-content">
+        <div class="all-photos-header">
+            <h3 id="allPhotosTitle">All Photos</h3>
+            <button class="all-photos-close" onclick="closeAllPhotosModal()">&times;</button>
+        </div>
+        <div class="all-photos-gallery" id="allPhotosGallery">
+        </div>
+    </div>
+</div>
+</body>
+</html>
