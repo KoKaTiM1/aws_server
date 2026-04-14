@@ -1,0 +1,121 @@
+name: Terraform Plan & Apply
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'infra/**'
+      - '.github/workflows/terraform.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'infra/**'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform action to perform'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+
+env:
+  AWS_REGION: us-east-1
+  TF_VERSION: 1.5.0
+  TF_LOG: INFO
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/envs/prod
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/eyedar-prod-github-actions-deployer
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive ../../
+        continue-on-error: true
+
+      - name: Terraform Init
+        run: terraform init
+        env:
+          TF_LOG: DEBUG
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+        id: plan
+
+      - name: Comment PR with Plan
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = 'Terraform plan generated. Review the plan before merging.';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '```\n' + plan + '\n```'
+            });
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve tfplan
+        env:
+          TF_LOG: DEBUG
+
+      - name: Terraform Destroy (Manual)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+        run: terraform destroy -auto-approve
+        env:
+          TF_LOG: DEBUG
+
+      - name: Save Terraform Outputs
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "=== Infrastructure Outputs ===" > /tmp/outputs.txt
+          terraform output >> /tmp/outputs.txt 2>&1
+          cat /tmp/outputs.txt
+
+      - name: Upload Plan Artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-plan
+          path: infra/envs/prod/tfplan
+          retention-days: 5
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "❌ Terraform ${{ github.event.inputs.action || 'plan' }} failed"
+          echo "Check the logs above for details"
+        shell: bash

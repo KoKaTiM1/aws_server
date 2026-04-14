@@ -9,14 +9,14 @@ terraform {
   }
 
   # Backend configuration for state storage
-  # Uncomment and configure after creating S3 bucket and DynamoDB table
-  # backend "s3" {
-  #   bucket         = "eyedar-prod-terraform-state"
-  #   key            = "prod/terraform.tfstate"
-  #   region         = "us-east-1"
-  #   encrypt        = true
-  #   dynamodb_table = "eyedar-prod-terraform-locks"
-  # }
+  # Stores terraform state in S3 with DynamoDB locking for team collaboration
+  backend "s3" {
+    bucket         = "eyedar-prod-terraform-state"
+    key            = "prod/terraform.tfstate"
+    region         = "us-east-1"
+    encrypt        = true
+    dynamodb_table = "eyedar-prod-terraform-locks"
+  }
 }
 
 provider "aws" {
