@@ -133,12 +133,11 @@ pub async fn post_alert(
     body: web::Bytes,
     pool: web::Data<PgPool>,
     s3_client: web::Data<S3Client>,
-    s3_bucket: web::Data<String>,
+    s3_bucket: web::Data<crate::S3BucketName>,
     sqs_client: web::Data<SqsClient>,
-    queue_url_ingest: web::Data<String>,
+    queue_url_ingest: web::Data<crate::QueueUrlIngest>,
 ) -> Result<HttpResponse, Error> {
-    println!("🔍 DEBUG alerts.rs::post_alert: s3_bucket received = '{}'", *s3_bucket);
-    println!("🔍 DEBUG alerts.rs::post_alert: s3_bucket length = {}", s3_bucket.len());
+    println!("🔍 DEBUG alerts.rs::post_alert: s3_bucket received = '{}'", s3_bucket.0);
 
     let content_type = req
         .headers()
@@ -151,7 +150,7 @@ pub async fn post_alert(
         return Err(actix_web::error::ErrorBadRequest("Use /alerts/multipart for file uploads"));
     } else {
         // Handle JSON payload (potentially with base64 image)
-        handle_json_alert(req, body, pool, s3_client.as_ref(), s3_bucket.as_ref(), sqs_client.as_ref(), queue_url_ingest.as_ref()).await
+        handle_json_alert(req, body, pool, s3_client.as_ref(), s3_bucket.0.as_str(), sqs_client.as_ref(), queue_url_ingest.0.as_str()).await
     }
 }
 
@@ -161,9 +160,9 @@ pub async fn post_multipart_alert(
     payload: Multipart,
     pool: web::Data<PgPool>,
     s3_client: web::Data<S3Client>,
-    s3_bucket: web::Data<String>,
+    s3_bucket: web::Data<crate::S3BucketName>,
 ) -> Result<HttpResponse, Error> {
-    handle_multipart_alert(req, payload, pool, s3_client.as_ref(), s3_bucket.as_ref()).await
+    handle_multipart_alert(req, payload, pool, s3_client.as_ref(), s3_bucket.0.as_str()).await
 }
 
 async fn handle_json_alert(

@@ -28,6 +28,14 @@ use rustls::{
 use std::{env, fs::File, io::BufReader};
 use tracing::{info, Level};
 
+// ✅ CRITICAL FIX: Newtype wrappers to distinguish between multiple web::Data<String> items
+// Without these, Actix-web can't distinguish S3_BUCKET from QUEUE_URL_INGEST when both are String
+#[derive(Clone, Debug)]
+pub struct S3BucketName(pub String);
+
+#[derive(Clone, Debug)]
+pub struct QueueUrlIngest(pub String);
+
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     // Handler for /api/v1/nonexistent
@@ -299,12 +307,12 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(s3_client.clone()))
             .app_data(web::Data::new(sqs_client.clone()))
             .app_data({
-                println!("🔍 DEBUG main.rs: About to register s3_bucket as app_data = '{}'", s3_bucket);
-                let data = web::Data::new(s3_bucket.clone());
-                println!("🔍 DEBUG main.rs: s3_bucket wrapped in web::Data = '{}'", *data);
+                println!("🔍 DEBUG main.rs: About to register S3_BUCKET as app_data = '{}'", s3_bucket);
+                let data = web::Data::new(S3BucketName(s3_bucket.clone()));
+                println!("🔍 DEBUG main.rs: S3BucketName wrapped in web::Data = '{}'", data.0);
                 data
             })
-            .app_data(web::Data::new(env::var("QUEUE_URL_INGEST").unwrap_or_default()))
+            .app_data(web::Data::new(QueueUrlIngest(env::var("QUEUE_URL_INGEST").unwrap_or_default())))
             // .app_data(web::Data::new(yolo_service.clone()))  // DISABLED - local files not in AWS
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(hb_registry.clone()))
