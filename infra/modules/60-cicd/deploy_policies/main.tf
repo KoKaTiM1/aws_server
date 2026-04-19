@@ -3,8 +3,8 @@
 
 # ========== ECR Push Permission ==========
 resource "aws_iam_role_policy" "github_ecr_push" {
-  name   = "github-ecr-push"
-  role   = split("/", var.github_deploy_role_arn)[1]
+  name = "github-ecr-push"
+  role = split("/", var.github_deploy_role_arn)[1]
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -36,8 +36,8 @@ resource "aws_iam_role_policy" "github_ecr_push" {
 
 # ========== ECS Update Permission ==========
 resource "aws_iam_role_policy" "github_ecs_update" {
-  name   = "github-ecs-update"
-  role   = split("/", var.github_deploy_role_arn)[1]
+  name = "github-ecs-update"
+  role = split("/", var.github_deploy_role_arn)[1]
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -77,8 +77,8 @@ resource "aws_iam_role_policy" "github_ecs_update" {
 
 # ========== CloudWatch Logs Permission (for deployment monitoring) ==========
 resource "aws_iam_role_policy" "github_logs" {
-  name   = "github-logs-read"
-  role   = split("/", var.github_deploy_role_arn)[1]
+  name = "github-logs-read"
+  role = split("/", var.github_deploy_role_arn)[1]
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

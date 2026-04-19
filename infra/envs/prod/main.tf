@@ -57,13 +57,13 @@ module "nat" {
 module "endpoints" {
   source = "../../modules/10-network/endpoints"
 
-  env_name                    = local.env_name
-  vpc_id                      = module.vpc.vpc_id
-  private_subnet_ids          = module.vpc.private_subnet_ids
-  private_route_table_ids     = module.vpc.private_route_table_ids
-  enable_s3_endpoint          = var.enable_s3_endpoint
-  enable_interface_endpoints  = var.enable_interface_endpoints
-  tags                        = local.tags
+  env_name                   = local.env_name
+  vpc_id                     = module.vpc.vpc_id
+  private_subnet_ids         = module.vpc.private_subnet_ids
+  private_route_table_ids    = module.vpc.private_route_table_ids
+  enable_s3_endpoint         = var.enable_s3_endpoint
+  enable_interface_endpoints = var.enable_interface_endpoints
+  tags                       = local.tags
 }
 
 module "security_groups" {
@@ -79,10 +79,10 @@ module "security_groups" {
 module "s3_objects" {
   source = "../../modules/20-data/s3_objects"
 
-  env_name     = local.env_name
-  kms_key_arn  = module.kms.kms_key_arn
+  env_name      = local.env_name
+  kms_key_arn   = module.kms.kms_key_arn
   force_destroy = true
-  tags         = local.tags
+  tags          = local.tags
 }
 
 module "rds" {
@@ -98,7 +98,7 @@ module "rds" {
   allocated_storage     = var.rds_allocated_storage
   multi_az              = var.rds_multi_az
   deletion_protection   = false
-  backup_retention_days = 7  # 7-day retention for automated backups
+  backup_retention_days = 7 # 7-day retention for automated backups
   tags                  = local.tags
 }
 
@@ -126,10 +126,10 @@ module "sqs" {
 module "cloudwatch" {
   source = "../../modules/30-observability/cloudwatch"
 
-  env_name          = local.env_name
+  env_name           = local.env_name
   log_retention_days = var.log_retention_days
-  kms_key_arn       = module.kms.kms_key_arn
-  tags              = local.tags
+  kms_key_arn        = module.kms.kms_key_arn
+  tags               = local.tags
 }
 
 module "budgets" {
@@ -152,9 +152,9 @@ module "ecr" {
 module "ecs_cluster" {
   source = "../../modules/40-compute/ecs_cluster"
 
-  env_name                   = local.env_name
-  enable_container_insights  = var.enable_container_insights
-  tags                       = local.tags
+  env_name                  = local.env_name
+  enable_container_insights = var.enable_container_insights
+  tags                      = local.tags
 }
 
 module "ecs_task_roles" {
@@ -184,55 +184,55 @@ module "ecs_services" {
   private_subnet_ids = module.vpc.private_subnet_ids
 
   security_group_ids = {
-    api       = module.security_groups.sg_ecs_api_id
-    workers   = module.security_groups.sg_ecs_workers_id
+    api     = module.security_groups.sg_ecs_api_id
+    workers = module.security_groups.sg_ecs_workers_id
   }
 
   task_execution_role_arn = module.ecs_task_roles.task_execution_role_arn
 
   task_role_arns = {
-    api            = module.ecs_task_roles.task_role_api_arn
-    rust_api       = module.ecs_task_roles.task_role_rust_api_arn
-    worker_ingest  = module.ecs_task_roles.task_role_worker_ingest_arn
-    worker_verify  = module.ecs_task_roles.task_role_worker_verify_arn
-    worker_notify  = module.ecs_task_roles.task_role_worker_notify_arn
+    api           = module.ecs_task_roles.task_role_api_arn
+    rust_api      = module.ecs_task_roles.task_role_rust_api_arn
+    worker_ingest = module.ecs_task_roles.task_role_worker_ingest_arn
+    worker_verify = module.ecs_task_roles.task_role_worker_verify_arn
+    worker_notify = module.ecs_task_roles.task_role_worker_notify_arn
   }
 
   log_group_names = {
-    api            = module.cloudwatch.log_group_api_name
-    rust_api       = module.cloudwatch.log_group_rust_api_name
-    worker_ingest  = module.cloudwatch.log_group_worker_ingest_name
-    worker_verify  = module.cloudwatch.log_group_worker_verify_name
-    worker_notify  = module.cloudwatch.log_group_worker_notify_name
+    api           = module.cloudwatch.log_group_api_name
+    rust_api      = module.cloudwatch.log_group_rust_api_name
+    worker_ingest = module.cloudwatch.log_group_worker_ingest_name
+    worker_verify = module.cloudwatch.log_group_worker_verify_name
+    worker_notify = module.cloudwatch.log_group_worker_notify_name
   }
 
   ecr_image_urls = {
-    api            = module.ecr.ecr_repo_url_api
-    rust_api       = module.ecr.ecr_repo_url_rust_api
-    worker_ingest  = module.ecr.ecr_repo_url_worker_ingest
-    worker_verify  = module.ecr.ecr_repo_url_worker_verify
-    worker_notify  = module.ecr.ecr_repo_url_worker_notify
+    api           = module.ecr.ecr_repo_url_api
+    rust_api      = module.ecr.ecr_repo_url_rust_api
+    worker_ingest = module.ecr.ecr_repo_url_worker_ingest
+    worker_verify = module.ecr.ecr_repo_url_worker_verify
+    worker_notify = module.ecr.ecr_repo_url_worker_notify
   }
 
   image_tags = {
-    api            = var.image_tag_api
-    rust_api       = var.image_tag_rust_api
-    worker_ingest  = var.image_tag_worker_ingest
-    worker_verify  = var.image_tag_worker_verify
-    worker_notify  = var.image_tag_worker_notify
+    api           = var.image_tag_api
+    rust_api      = var.image_tag_rust_api
+    worker_ingest = var.image_tag_worker_ingest
+    worker_verify = var.image_tag_worker_verify
+    worker_notify = var.image_tag_worker_notify
   }
 
   environment_vars = {
-    rds_host                = module.rds.rds_address
-    rds_port                = tostring(module.rds.rds_port)
-    rds_db_name             = module.rds.rds_db_name
-    rds_user                = "eyedar_admin"
-    rds_password            = ""  # Not used - DB creds come from Secrets Manager
-    redis_host              = module.redis.redis_endpoint
-    redis_port              = tostring(module.redis.redis_port)
-    s3_bucket_name          = module.s3_objects.s3_bucket_name
-    sqs_queue_url_detection = module.sqs.queue_url_detection_created
-    sqs_queue_url_verify    = module.sqs.queue_url_verify_requested
+    rds_host                       = module.rds.rds_address
+    rds_port                       = tostring(module.rds.rds_port)
+    rds_db_name                    = module.rds.rds_db_name
+    rds_user                       = "eyedar_admin"
+    rds_password                   = "" # Not used - DB creds come from Secrets Manager
+    redis_host                     = module.redis.redis_endpoint
+    redis_port                     = tostring(module.redis.redis_port)
+    s3_bucket_name                 = module.s3_objects.s3_bucket_name
+    sqs_queue_url_detection        = module.sqs.queue_url_detection_created
+    sqs_queue_url_verify           = module.sqs.queue_url_verify_requested
     sqs_queue_url_verified_animals = module.sqs.queue_url_verified_animals
   }
 
@@ -242,7 +242,7 @@ module "ecs_services" {
     api_keys = module.secrets.api_keys_secret_arn
   }
 
-  alb_target_group_arn_api       = module.alb.target_group_api_arn
+  alb_target_group_arn_api = module.alb.target_group_api_arn
 
   api_desired_count           = var.api_desired_count
   rust_api_desired_count      = var.rust_api_desired_count
@@ -270,10 +270,10 @@ module "acm" {
 module "alb" {
   source = "../../modules/50-edge/alb"
 
-  env_name            = local.env_name
-  vpc_id              = module.vpc.vpc_id
-  public_subnet_ids   = module.vpc.public_subnet_ids
-  security_group_id   = module.security_groups.sg_alb_public_id
+  env_name          = local.env_name
+  vpc_id            = module.vpc.vpc_id
+  public_subnet_ids = module.vpc.public_subnet_ids
+  security_group_id = module.security_groups.sg_alb_public_id
   #acm_certificate_arn = module.acm.certificate_arn  # HTTPS enabled
 
   api_target_config = {
@@ -290,20 +290,20 @@ module "waf" {
   count  = var.enable_waf ? 1 : 0
   source = "../../modules/50-edge/waf"
 
-  env_name           = local.env_name
-  alb_arn            = module.alb.alb_arn
+  env_name             = local.env_name
+  alb_arn              = module.alb.alb_arn
   enable_rate_limiting = true
-  rate_limit         = var.waf_rate_limit
-  tags               = local.tags
+  rate_limit           = var.waf_rate_limit
+  tags                 = local.tags
 }
 
 # CI/CD Layer
 module "github_oidc" {
   source = "../../modules/60-cicd/github_oidc"
 
-  env_name   = local.env_name
-  github_org = var.github_org
-  github_repo = var.github_repo
+  env_name        = local.env_name
+  github_org      = var.github_org
+  github_repo     = var.github_repo
   github_branches = var.github_branches
 
   ecr_repository_arns = [

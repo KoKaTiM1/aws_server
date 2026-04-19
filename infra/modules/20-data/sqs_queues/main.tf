@@ -2,8 +2,8 @@
 resource "aws_sqs_queue" "detection_created_dlq" {
   name = "eyedar-${var.env_name}-detection-created-dlq"
 
-  message_retention_seconds = 1209600 # 14 days
-  kms_master_key_id         = var.kms_key_id
+  message_retention_seconds         = 1209600 # 14 days
+  kms_master_key_id                 = var.kms_key_id
   kms_data_key_reuse_period_seconds = 300
 
   tags = merge(var.tags, {
@@ -15,9 +15,9 @@ resource "aws_sqs_queue" "detection_created_dlq" {
 resource "aws_sqs_queue" "detection_created" {
   name = "eyedar-${var.env_name}-detection-created"
 
-  message_retention_seconds = var.message_retention_seconds
-  visibility_timeout_seconds = var.visibility_timeout_seconds
-  kms_master_key_id         = var.kms_key_id
+  message_retention_seconds         = var.message_retention_seconds
+  visibility_timeout_seconds        = var.visibility_timeout_seconds
+  kms_master_key_id                 = var.kms_key_id
   kms_data_key_reuse_period_seconds = 300
 
   redrive_policy = jsonencode({
@@ -34,8 +34,8 @@ resource "aws_sqs_queue" "detection_created" {
 resource "aws_sqs_queue" "verify_requested_dlq" {
   name = "eyedar-${var.env_name}-verify-requested-dlq"
 
-  message_retention_seconds = 1209600 # 14 days
-  kms_master_key_id         = var.kms_key_id
+  message_retention_seconds         = 1209600 # 14 days
+  kms_master_key_id                 = var.kms_key_id
   kms_data_key_reuse_period_seconds = 300
 
   tags = merge(var.tags, {
@@ -47,9 +47,9 @@ resource "aws_sqs_queue" "verify_requested_dlq" {
 resource "aws_sqs_queue" "verify_requested" {
   name = "eyedar-${var.env_name}-verify-requested"
 
-  message_retention_seconds = var.message_retention_seconds
-  visibility_timeout_seconds = 300 # Longer for ML processing
-  kms_master_key_id         = var.kms_key_id
+  message_retention_seconds         = var.message_retention_seconds
+  visibility_timeout_seconds        = 300 # Longer for ML processing
+  kms_master_key_id                 = var.kms_key_id
   kms_data_key_reuse_period_seconds = 300
 
   redrive_policy = jsonencode({
@@ -105,8 +105,8 @@ resource "aws_cloudwatch_metric_alarm" "verify_dlq_alarm" {
 resource "aws_sqs_queue" "verified_animals_dlq" {
   name = "eyedar-${var.env_name}-verified-animals-dlq"
 
-  message_retention_seconds = 1209600 # 14 days
-  kms_master_key_id         = var.kms_key_id
+  message_retention_seconds         = 1209600 # 14 days
+  kms_master_key_id                 = var.kms_key_id
   kms_data_key_reuse_period_seconds = 300
 
   tags = merge(var.tags, {
@@ -118,9 +118,9 @@ resource "aws_sqs_queue" "verified_animals_dlq" {
 resource "aws_sqs_queue" "verified_animals" {
   name = "eyedar-${var.env_name}-verified-animals"
 
-  message_retention_seconds = var.message_retention_seconds
-  visibility_timeout_seconds = var.visibility_timeout_seconds
-  kms_master_key_id         = var.kms_key_id
+  message_retention_seconds         = var.message_retention_seconds
+  visibility_timeout_seconds        = var.visibility_timeout_seconds
+  kms_master_key_id                 = var.kms_key_id
   kms_data_key_reuse_period_seconds = 300
 
   redrive_policy = jsonencode({

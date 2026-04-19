@@ -180,7 +180,7 @@ variable "enable_container_insights" {
 variable "monthly_budget_amount" {
   description = "Monthly budget limit in USD"
   type        = number
-  default     = 100  # Start lean, upgrade later as needed
+  default     = 100 # Start lean, upgrade later as needed
 }
 
 variable "budget_alert_emails" {
