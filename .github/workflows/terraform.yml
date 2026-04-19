@@ -185,13 +185,25 @@ jobs:
             aws elasticache delete-cache-subnet-group --cache-subnet-group-name $subnet_group --region $REGION 2>&1 | grep -v "CacheSubnetGroupNotFoundFault\|InvalidCacheSubnetGroupStateFault" || true
           done
 
-          echo "=== Step 7: Releasing Elastic IPs ==="
+          echo "=== Step 7: Deleting load balancers ==="
+          for alb_arn in $(aws elbv2 describe-load-balancers --region $REGION --query 'LoadBalancers[].LoadBalancerArn' --output text 2>/dev/null); do
+            echo "Deleting load balancer: $alb_arn"
+            aws elbv2 delete-load-balancer --load-balancer-arn $alb_arn --region $REGION 2>&1 | grep -v "LoadBalancerNotFoundException" || true
+          done
+
+          echo "=== Step 8: Cleaning up network interfaces in VPC ==="
+          for eni in $(aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=vpc-*" --region $REGION --query 'NetworkInterfaces[].NetworkInterfaceId' --output text 2>/dev/null); do
+            echo "Deleting ENI: $eni"
+            aws ec2 delete-network-interface --network-interface-id $eni --region $REGION 2>&1 | grep -v "InvalidNetworkInterfaceID\|InvalidNetworkInterfaceInUse" || true
+          done
+
+          echo "=== Step 9: Releasing Elastic IPs ==="
           for alloc_id in $(aws ec2 describe-addresses --region $REGION --query 'Addresses[].AllocationId' --output text 2>/dev/null); do
             echo "Releasing EIP: $alloc_id"
             aws ec2 release-address --allocation-id $alloc_id --region $REGION 2>&1 | grep -v "InvalidAllocationID" || true
           done
 
-          echo "=== Step 8: Waiting for propagation (30 seconds) ==="
+          echo "=== Step 10: Waiting for propagation (30 seconds) ==="
           sleep 30
 
           echo "=== Cleanup completed ==="
