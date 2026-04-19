@@ -108,26 +108,34 @@ jobs:
           CLUSTER="eyedar-prod"
           REGION="${{ env.AWS_REGION }}"
 
-          echo "Deleting ECS services..."
+          echo "=== Step 1: Deleting ECS services ==="
           for service in eyedar-prod-api eyedar-prod-worker-ingest eyedar-prod-worker-verify eyedar-prod-worker-notify eyedar-prod-rust-api eyedar-prod-mqtt-monitor; do
-            aws ecs delete-service --cluster $CLUSTER --service $service --force --region $REGION 2>/dev/null || true
+            echo "Deleting service: $service"
+            aws ecs delete-service --cluster $CLUSTER --service $service --force --region $REGION 2>&1 | grep -v "ResourceNotFoundException" || true
           done
 
-          echo "Deleting ElastiCache cluster..."
-          aws elasticache delete-cache-cluster --cache-cluster-id eyedar-prod-redis --skip-final-snapshot --region $REGION 2>/dev/null || true
+          echo "=== Step 2: Waiting for ECS tasks to stop (60 seconds) ==="
+          sleep 60
 
-          echo "Releasing Elastic IPs..."
-          for alloc_id in $(aws ec2 describe-addresses --region $REGION --query 'Addresses[?Tags[?Key==`Name` && contains(Value, `eyedar`)]].AllocationId' --output text 2>/dev/null); do
-            aws ec2 release-address --allocation-id $alloc_id --region $REGION 2>/dev/null || true
+          echo "=== Step 3: Deleting ECS cluster ==="
+          aws ecs delete-cluster --cluster $CLUSTER --region $REGION 2>&1 | grep -v "ClusterNotFoundException" || true
+
+          echo "=== Step 4: Deleting ElastiCache clusters ==="
+          for cluster_id in $(aws elasticache describe-cache-clusters --region $REGION --query 'CacheClusters[?Engine==`redis`].CacheClusterId' --output text 2>/dev/null); do
+            echo "Deleting ElastiCache cluster: $cluster_id"
+            aws elasticache delete-cache-cluster --cache-cluster-id $cluster_id --region $REGION 2>&1 | grep -v "CacheClusterNotFound" || true
           done
 
-          echo "Deleting network interfaces..."
-          for eni in $(aws ec2 describe-network-interfaces --region $REGION --filters "Name=tag:Name,Values=*eyedar*" --query 'NetworkInterfaces[].NetworkInterfaceId' --output text 2>/dev/null); do
-            aws ec2 delete-network-interface --network-interface-id $eni --region $REGION 2>/dev/null || true
+          echo "=== Step 5: Deleting Network Interfaces ==="
+          for eni in $(aws ec2 describe-network-interfaces --region $REGION --filters "Name=status,Values=available" "Name=tag:aws:cloudformation:stack-name,Values=*eyedar*" --query 'NetworkInterfaces[].NetworkInterfaceId' --output text 2>/dev/null); do
+            echo "Deleting ENI: $eni"
+            aws ec2 delete-network-interface --network-interface-id $eni --region $REGION 2>&1 | grep -v "InvalidNetworkInterfaceID" || true
           done
 
-          echo "Waiting 30 seconds for cleanup to propagate..."
+          echo "=== Step 6: Waiting for propagation (30 seconds) ==="
           sleep 30
+
+          echo "=== Cleanup completed ==="
 
       - name: Terraform Destroy (Manual)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
