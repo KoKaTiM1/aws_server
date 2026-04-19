@@ -124,13 +124,6 @@ jobs:
             aws secretsmanager delete-secret --secret-id $secret --force-delete-without-recovery --region $REGION 2>&1 | grep -v "ResourceNotFoundException" || true
           done
 
-          echo "Removing RDS groups..."
-          aws rds delete-db-subnet-group --db-subnet-group-name eyedar-prod-db-subnet-group --region $REGION 2>&1 | grep -v "DBSubnetGroupNotFoundFault" || true
-          aws rds delete-db-parameter-group --db-parameter-group-name eyedar-prod-postgres-params --region $REGION 2>&1 | grep -v "DBParameterGroupNotFoundFault" || true
-
-          echo "Removing IAM OIDC provider..."
-          aws iam delete-open-id-connect-provider --open-id-connect-provider-arn "arn:aws:iam::$(aws sts get-caller-identity --query Account --output text):oidc-provider/token.actions.githubusercontent.com" 2>&1 | grep -v "NoSuchEntity\|ValidationError" || true
-
           echo "Cleanup completed"
 
 
