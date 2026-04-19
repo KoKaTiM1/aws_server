@@ -63,6 +63,7 @@ jobs:
         with:
           context: ./workers/worker-ingest
           push: ${{ github.ref == 'refs/heads/main' }}
+          no-cache: true
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-ingest:latest
             ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-ingest:${{ github.sha }}
