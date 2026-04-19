@@ -41,6 +41,14 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Create ECR repositories if they don't exist
+        run: |
+          REPOS=("eyedar-api" "eyedar-worker-ingest" "eyedar-worker-verify" "eyedar-worker-notify" "eyedar-rust-api" "eyedar-mqtt-monitor")
+          for repo in "${REPOS[@]}"; do
+            aws ecr describe-repositories --repository-names "$repo" --region ${{ env.AWS_REGION }} 2>/dev/null || \
+            aws ecr create-repository --repository-name "$repo" --region ${{ env.AWS_REGION }}
+          done
+
       - name: Build and push API image
         uses: docker/build-push-action@v5
         with:
