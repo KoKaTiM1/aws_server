@@ -69,7 +69,7 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -out=tfplan
+        run: terraform plan -lock=false -out=tfplan
         id: plan
 
       - name: Comment PR with Plan
