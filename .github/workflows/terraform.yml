@@ -164,8 +164,8 @@ jobs:
             aws ecs delete-service --cluster $CLUSTER --service $service --force --region $REGION 2>&1 | grep -v "ResourceNotFoundException" || true
           done
 
-          echo "=== Step 2: Waiting for ECS tasks to stop (60 seconds) ==="
-          sleep 60
+          echo "=== Step 2: Waiting for ECS tasks to stop (180 seconds) ==="
+          sleep 180
 
           echo "=== Step 3: Deleting ECS cluster ==="
           aws ecs delete-cluster --cluster $CLUSTER --region $REGION 2>&1 | grep -v "ClusterNotFoundException" || true
