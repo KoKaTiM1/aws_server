@@ -107,6 +107,11 @@ jobs:
         run: terraform destroy -auto-approve -lock=false
         env:
           TF_LOG: DEBUG
+          TF_VAR_domain_name: "example.com"
+          TF_VAR_hosted_zone_id: "Z1234567890ABC"
+          TF_VAR_budget_alert_emails: '["admin@example.com"]'
+          TF_VAR_github_org: "KoKaTiM1"
+          TF_VAR_github_repo: "aws_server"
 
       - name: Save Terraform Outputs
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
