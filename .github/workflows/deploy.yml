@@ -90,9 +90,10 @@ jobs:
       - name: Build and push rust_api image
         uses: docker/build-push-action@v5
         with:
-          context: ./services/rust_api
-          dockerfile: ./services/rust_api/Dockerfile
+          context: .
+          file: ./services/rust_api/Dockerfile
           push: ${{ github.ref == 'refs/heads/main' }}
+          no-cache: true
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/eyedar-rust-api:latest
             ${{ steps.login-ecr.outputs.registry }}/eyedar-rust-api:${{ github.sha }}

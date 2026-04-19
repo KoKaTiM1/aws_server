@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /usr/src/app
 
 # Copy Cargo files
-COPY Cargo.toml ./
-RUN test -f Cargo.lock && cp Cargo.lock ./Cargo.lock || true
+COPY services/rust_api/Cargo.toml ./
+RUN test -f services/rust_api/Cargo.lock && cp services/rust_api/Cargo.lock ./Cargo.lock || true
 
 # Create dummy main.rs for dependency caching
 RUN mkdir -p src && echo 'fn main() {}' > src/main.rs
@@ -21,8 +21,8 @@ RUN mkdir -p src && echo 'fn main() {}' > src/main.rs
 RUN cargo build --release 2>/dev/null || true
 
 # Copy actual source and dashboard HTML for include_str! macro
-COPY src ./src
-COPY ../../workers/dashboard/dashboard.html ./workers/dashboard/dashboard.html
+COPY services/rust_api/src ./src
+COPY workers/dashboard/dashboard.html ./workers/dashboard/dashboard.html
 
 # Touch main.rs to rebuild
 RUN touch src/main.rs && cargo build --release
@@ -42,11 +42,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /usr/src/app/target/release/rust_api /app/
 
 # Copy entrypoint and config
-COPY entrypoint.sh /app/
+COPY services/rust_api/entrypoint.sh /app/
 RUN chmod +x /app/entrypoint.sh
 
 # Copy database migrations from workspace root
-COPY ../../infra/db/migrations /app/migrations
+COPY infra/db/migrations /app/migrations
 RUN chmod -R 755 /app/migrations
 
 # Non-root user
