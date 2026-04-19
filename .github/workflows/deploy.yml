@@ -73,10 +73,10 @@ jobs:
         with:
           context: ./workers/worker-verify
           push: ${{ github.ref == 'refs/heads/main' }}
+          no-cache: true
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-verify:latest
             ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-verify:${{ github.sha }}
-          dockerfile: Dockerfile
 
       - name: Build and push worker-notify image
         uses: docker/build-push-action@v5
