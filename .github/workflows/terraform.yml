@@ -114,6 +114,24 @@ jobs:
           TF_VAR_github_org: "KoKaTiM1"
           TF_VAR_github_repo: "aws_server"
 
+      - name: Cleanup Conflicting Resources (Pre-Apply)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply'
+        run: |
+          REGION="${{ env.AWS_REGION }}"
+
+          echo "Removing Secrets Manager secrets scheduled for deletion..."
+          for secret in eyedar-prod-db-password-v3 eyedar-prod-firebase-key-v3 eyedar-prod-api-keys-v3; do
+            aws secretsmanager delete-secret --secret-id $secret --force-delete-without-recovery --region $REGION 2>&1 | grep -v "ResourceNotFoundException" || true
+          done
+
+          echo "Removing RDS groups..."
+          aws rds delete-db-subnet-group --db-subnet-group-name eyedar-prod-db-subnet-group --region $REGION 2>&1 | grep -v "DBSubnetGroupNotFoundFault" || true
+          aws rds delete-db-parameter-group --db-parameter-group-name eyedar-prod-postgres-params --region $REGION 2>&1 | grep -v "DBParameterGroupNotFoundFault" || true
+
+          echo "Cleanup completed"
+
+
+
       - name: Comment PR with Plan
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
