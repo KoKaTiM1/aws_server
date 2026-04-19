@@ -34,7 +34,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID_A }}:role/oidc-provider
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID_A }}:role/eyedar-prod-github-actions-deployer
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
@@ -121,7 +121,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID_A }}:role/oidc-provider
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID_A }}:role/eyedar-prod-github-actions-deployer
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Update ECS services
