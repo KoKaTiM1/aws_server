@@ -120,20 +120,26 @@ jobs:
           echo "=== Step 3: Deleting ECS cluster ==="
           aws ecs delete-cluster --cluster $CLUSTER --region $REGION 2>&1 | grep -v "ClusterNotFoundException" || true
 
-          echo "=== Step 4: Deleting ElastiCache clusters ==="
-          for cluster_id in $(aws elasticache describe-cache-clusters --region $REGION --query 'CacheClusters[?Engine==`redis`].CacheClusterId' --output text 2>/dev/null); do
-            echo "Deleting ElastiCache cluster: $cluster_id"
-            aws elasticache delete-cache-cluster --cache-cluster-id $cluster_id --region $REGION 2>&1 | grep -v "CacheClusterNotFound" || true
+          echo "=== Step 4: Deleting ElastiCache replication groups ==="
+          for repl_group in $(aws elasticache describe-replication-groups --region $REGION --query 'ReplicationGroups[?Status!=`deleting`].ReplicationGroupId' --output text 2>/dev/null); do
+            echo "Deleting ElastiCache replication group: $repl_group"
+            aws elasticache delete-replication-group --replication-group-id $repl_group --region $REGION 2>&1 | grep -v "ReplicationGroupNotFound" || true
           done
 
-          echo "=== Step 5: Deleting Network Interfaces ==="
-          for eni in $(aws ec2 describe-network-interfaces --region $REGION --filters "Name=status,Values=available" "Name=tag:aws:cloudformation:stack-name,Values=*eyedar*" --query 'NetworkInterfaces[].NetworkInterfaceId' --output text 2>/dev/null); do
+          echo "=== Step 5: Deleting ElastiCache subnet groups ==="
+          for subnet_group in $(aws elasticache describe-cache-subnet-groups --region $REGION --query 'CacheSubnetGroups[].CacheSubnetGroupName' --output text 2>/dev/null); do
+            echo "Deleting ElastiCache subnet group: $subnet_group"
+            aws elasticache delete-cache-subnet-group --cache-subnet-group-name $subnet_group --region $REGION 2>&1 | grep -v "CacheSubnetGroupNotFoundFault\|InvalidCacheSubnetGroupStateFault" || true
+          done
+
+          echo "=== Step 6: Deleting Network Interfaces ==="
+          for eni in $(aws ec2 describe-network-interfaces --region $REGION --filters "Name=status,Values=available" --query 'NetworkInterfaces[].NetworkInterfaceId' --output text 2>/dev/null); do
             echo "Deleting ENI: $eni"
             aws ec2 delete-network-interface --network-interface-id $eni --region $REGION 2>&1 | grep -v "InvalidNetworkInterfaceID" || true
           done
 
-          echo "=== Step 6: Waiting for propagation (30 seconds) ==="
-          sleep 30
+          echo "=== Step 7: Waiting for propagation (60 seconds) ==="
+          sleep 60
 
           echo "=== Cleanup completed ==="
 
