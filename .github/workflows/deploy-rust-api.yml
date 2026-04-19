@@ -8,23 +8,12 @@ on:
       - 'infra/db/migrations/**'
       - '.github/workflows/deploy-rust-api.yml'
 
-permissions:
-  id-token: write
-  contents: read
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::937115287175:role/eyedar-prod-github-actions-deployer
-          aws-region: us-east-1
-          role-session-name: GitHubActions-RustAPI-Deploy
-
+      
       - name: Build and push Docker image
         run: |
           cd services/rust_api
@@ -32,6 +21,18 @@ jobs:
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 937115287175.dkr.ecr.us-east-1.amazonaws.com
           docker tag eyedar-prod-rust-api:${{ github.sha }} 937115287175.dkr.ecr.us-east-1.amazonaws.com/eyedar-prod-rust-api:${{ github.sha }}
           docker push 937115287175.dkr.ecr.us-east-1.amazonaws.com/eyedar-prod-rust-api:${{ github.sha }}
+
+      - name: Run database migrations
+        run: |
+          DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id eyedar-prod-db-password-v3 --query SecretString --out text --region us-east-1 | jq -r .password)
+          export PGPASSWORD="$DB_PASSWORD"
+          psql -h eyedar-prod-db.cmbs6wg8ok0o.us-east-1.rds.amazonaws.com \
+                -p 5432 \
+                -U eyedar_admin \
+                -d eyedar \
+                -f infra/db/migrations/001_init_schema.sql \
+                -f infra/db/migrations/002_rust_api_tables.sql
+          echo "✅ Migrations completed"
 
       - name: Update ECS service
         run: |
@@ -48,3 +49,7 @@ jobs:
             --services eyedar-prod-rust-api \
             --region us-east-1
           echo "✅ Deployment stable"
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: 937115287175
