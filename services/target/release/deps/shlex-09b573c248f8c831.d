@@ -1,8 +1,0 @@
-C:\Users\dani0\Documents\GitHub\Startup\ServerRoadmap\CloudServer\AWS-SERVER-main\services\target\release\deps\shlex-09b573c248f8c831.d: C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\shlex-1.3.0\src\lib.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\shlex-1.3.0\src\bytes.rs
-
-C:\Users\dani0\Documents\GitHub\Startup\ServerRoadmap\CloudServer\AWS-SERVER-main\services\target\release\deps\libshlex-09b573c248f8c831.rlib: C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\shlex-1.3.0\src\lib.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\shlex-1.3.0\src\bytes.rs
-
-C:\Users\dani0\Documents\GitHub\Startup\ServerRoadmap\CloudServer\AWS-SERVER-main\services\target\release\deps\libshlex-09b573c248f8c831.rmeta: C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\shlex-1.3.0\src\lib.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\shlex-1.3.0\src\bytes.rs
-
-C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\shlex-1.3.0\src\lib.rs:
-C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\shlex-1.3.0\src\bytes.rs:

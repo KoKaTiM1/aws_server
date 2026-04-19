@@ -1,9 +1,0 @@
-C:\Users\dani0\Documents\GitHub\Startup\ServerRoadmap\CloudServer\AWS-SERVER-main\services\target\debug\deps\aws_smithy_xml-51d77d9b3f8bbcf3.d: C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\aws-smithy-xml-0.60.10\src\lib.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\aws-smithy-xml-0.60.10\src\decode.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\aws-smithy-xml-0.60.10\src\encode.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\aws-smithy-xml-0.60.10\src\escape.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\aws-smithy-xml-0.60.10\src\unescape.rs
-
-C:\Users\dani0\Documents\GitHub\Startup\ServerRoadmap\CloudServer\AWS-SERVER-main\services\target\debug\deps\libaws_smithy_xml-51d77d9b3f8bbcf3.rmeta: C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\aws-smithy-xml-0.60.10\src\lib.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\aws-smithy-xml-0.60.10\src\decode.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\aws-smithy-xml-0.60.10\src\encode.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\aws-smithy-xml-0.60.10\src\escape.rs C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\aws-smithy-xml-0.60.10\src\unescape.rs
-
-C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\aws-smithy-xml-0.60.10\src\lib.rs:
-C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\aws-smithy-xml-0.60.10\src\decode.rs:
-C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\aws-smithy-xml-0.60.10\src\encode.rs:
-C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\aws-smithy-xml-0.60.10\src\escape.rs:
-C:\Users\dani0\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\aws-smithy-xml-0.60.10\src\unescape.rs:
