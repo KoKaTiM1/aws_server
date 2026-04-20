@@ -140,6 +140,9 @@ jobs:
           TF_VAR_budget_alert_emails: '["admin@example.com"]'
           TF_VAR_github_org: "KoKaTiM1"
           TF_VAR_github_repo: "aws_server"
+          TF_VAR_api_keys: ${{ secrets.API_KEYS }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+          TF_VAR_firebase_key: ${{ secrets.FIREBASE_KEY }}
 
       - name: Cleanup Conflicting Resources (Pre-Apply)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply'
