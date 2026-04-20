@@ -170,40 +170,46 @@ jobs:
           echo "=== Step 3: Deleting ECS cluster ==="
           aws ecs delete-cluster --cluster $CLUSTER --region $REGION 2>&1 | grep -v "ClusterNotFoundException" || true
 
-          echo "=== Step 4: Deleting ElastiCache replication groups ==="
+          echo "=== Step 4: Deleting RDS database instances ==="
+          for db_instance in $(aws rds describe-db-instances --region $REGION --query 'DBInstances[].DBInstanceIdentifier' --output text 2>/dev/null); do
+            echo "Deleting RDS instance: $db_instance"
+            aws rds delete-db-instance --db-instance-identifier $db_instance --skip-final-snapshot --region $REGION 2>&1 | grep -v "DBInstanceNotFound\|InvalidDBInstanceState" || true
+          done
+
+          echo "=== Step 5: Deleting ElastiCache replication groups ==="
           for repl_group in $(aws elasticache describe-replication-groups --region $REGION --query 'ReplicationGroups[?Status!=`deleting`].ReplicationGroupId' --output text 2>/dev/null); do
             echo "Deleting ElastiCache replication group: $repl_group"
             aws elasticache delete-replication-group --replication-group-id $repl_group --region $REGION 2>&1 | grep -v "ReplicationGroupNotFound" || true
           done
 
-          echo "=== Step 5: Waiting for replication group to fully delete (120 seconds) ==="
+          echo "=== Step 6: Waiting for RDS and ElastiCache deletion (120 seconds) ==="
           sleep 120
 
-          echo "=== Step 6: Deleting ElastiCache subnet groups ==="
+          echo "=== Step 7: Deleting ElastiCache subnet groups ==="
           for subnet_group in $(aws elasticache describe-cache-subnet-groups --region $REGION --query 'CacheSubnetGroups[].CacheSubnetGroupName' --output text 2>/dev/null); do
             echo "Deleting ElastiCache subnet group: $subnet_group"
             aws elasticache delete-cache-subnet-group --cache-subnet-group-name $subnet_group --region $REGION 2>&1 | grep -v "CacheSubnetGroupNotFoundFault\|InvalidCacheSubnetGroupStateFault" || true
           done
 
-          echo "=== Step 7: Deleting load balancers ==="
+          echo "=== Step 8: Deleting load balancers ==="
           for alb_arn in $(aws elbv2 describe-load-balancers --region $REGION --query 'LoadBalancers[].LoadBalancerArn' --output text 2>/dev/null); do
             echo "Deleting load balancer: $alb_arn"
             aws elbv2 delete-load-balancer --load-balancer-arn $alb_arn --region $REGION 2>&1 | grep -v "LoadBalancerNotFoundException" || true
           done
 
-          echo "=== Step 8: Cleaning up network interfaces in VPC ==="
+          echo "=== Step 9: Cleaning up network interfaces in VPC ==="
           for eni in $(aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=vpc-*" --region $REGION --query 'NetworkInterfaces[].NetworkInterfaceId' --output text 2>/dev/null); do
             echo "Deleting ENI: $eni"
             aws ec2 delete-network-interface --network-interface-id $eni --region $REGION 2>&1 | grep -v "InvalidNetworkInterfaceID\|InvalidNetworkInterfaceInUse" || true
           done
 
-          echo "=== Step 9: Releasing Elastic IPs ==="
+          echo "=== Step 10: Releasing Elastic IPs ==="
           for alloc_id in $(aws ec2 describe-addresses --region $REGION --query 'Addresses[].AllocationId' --output text 2>/dev/null); do
             echo "Releasing EIP: $alloc_id"
             aws ec2 release-address --allocation-id $alloc_id --region $REGION 2>&1 | grep -v "InvalidAllocationID" || true
           done
 
-          echo "=== Step 10: Waiting for propagation (30 seconds) ==="
+          echo "=== Step 11: Waiting for propagation (30 seconds) ==="
           sleep 30
 
           echo "=== Cleanup completed ==="
