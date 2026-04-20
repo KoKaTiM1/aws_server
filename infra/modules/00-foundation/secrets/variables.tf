@@ -15,6 +15,12 @@ variable "db_password" {
   default     = ""
 }
 
+variable "db_username" {
+  description = "Database username for secret"
+  type        = string
+  default     = "eyedar_admin"
+}
+
 variable "firebase_key" {
   description = "Firebase service account key (JSON string)"
   type        = string

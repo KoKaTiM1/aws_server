@@ -14,6 +14,22 @@ let firebaseAdmin = null;
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+function extractApiKey(secretString) {
+  if (!secretString) return null;
+  const trimmed = secretString.trim();
+
+  if (trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      return parsed.api_key || parsed.API_KEY || parsed.key || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  return trimmed;
+}
+
 // ============ MIDDLEWARE ============
 
 // Security headers
@@ -317,24 +333,55 @@ async function startup() {
     if (!API_KEY) {
       try {
         const smClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
-        const response = await smClient.send(new GetSecretValueCommand({ SecretId: 'eyedar-prod-api-keys' }));
-        API_KEY = response.SecretString;
+        let response;
+
+        try {
+          response = await smClient.send(new GetSecretValueCommand({ SecretId: 'eyedar-prod-api-keys-v3' }));
+        } catch (_) {
+          response = await smClient.send(new GetSecretValueCommand({ SecretId: 'eyedar-prod-api-keys' }));
+        }
+
+        API_KEY = extractApiKey(response.SecretString);
+
+        if (!API_KEY) {
+          throw new Error('API key secret was found but format is invalid. Expected plain text or JSON with api_key/API_KEY/key');
+        }
+
         console.log('✅ API key loaded from Secrets Manager');
       } catch (smError) {
         console.error('❌ FATAL: Could not load API key from Secrets Manager:', smError.message);
-        console.error('Set API_KEY environment variable or ensure secret exists: eyedar-prod-api-keys');
+        console.error('Set API_KEY environment variable or ensure secret exists: eyedar-prod-api-keys-v3');
         process.exit(1);  // Fail hard - let ECS restart the task
       }
     } else {
+      const parsedApiKey = extractApiKey(API_KEY);
+      if (!parsedApiKey) {
+        console.error('❌ FATAL: API_KEY environment variable is invalid. Expected plain text or JSON with api_key/API_KEY/key');
+        process.exit(1);
+      }
+      API_KEY = parsedApiKey;
       console.log('✅ API key loaded from environment variable');
     }
 
     // Initialize Firebase Admin SDK
     try {
       const admin = require('firebase-admin');
-      const smClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
-      const response = await smClient.send(new GetSecretValueCommand({ SecretId: 'eyedar-prod-firebase-key' }));
-      const serviceAccount = JSON.parse(response.SecretString);
+      let serviceAccountRaw = process.env.FIREBASE_CONFIG || process.env.FIREBASE_SERVICE_ACCOUNT;
+
+      if (!serviceAccountRaw) {
+        const smClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
+        let response;
+
+        try {
+          response = await smClient.send(new GetSecretValueCommand({ SecretId: 'eyedar-prod-firebase-key-v3' }));
+        } catch (_) {
+          response = await smClient.send(new GetSecretValueCommand({ SecretId: 'eyedar-prod-firebase-key' }));
+        }
+
+        serviceAccountRaw = response.SecretString;
+      }
+
+      const serviceAccount = JSON.parse(serviceAccountRaw);
 
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),

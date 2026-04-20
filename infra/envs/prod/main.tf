@@ -26,9 +26,13 @@ module "kms" {
 module "secrets" {
   source = "../../modules/00-foundation/secrets"
 
-  env_name    = local.env_name
-  kms_key_arn = module.kms.kms_key_arn
-  tags        = local.tags
+  env_name     = local.env_name
+  kms_key_arn  = module.kms.kms_key_arn
+  db_username  = var.db_username
+  db_password  = var.db_password
+  firebase_key = var.firebase_key
+  api_keys     = var.api_keys
+  tags         = local.tags
 }
 
 # Network Layer

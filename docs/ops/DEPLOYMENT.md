@@ -79,12 +79,30 @@ terraform output > ../../../deployment-outputs.txt
 
 ```powershell
 aws secretsmanager put-secret-value `
-  --secret-id /eyedar/prod/firebase/credentials `
+  --secret-id eyedar-prod-firebase-key-v3 `
   --secret-string (Get-Content path\to\serviceAccountKey.json -Raw) `
   --region us-east-1
 ```
 
 Replace `path\to\serviceAccountKey.json` with your actual file path.
+
+Also make sure the DB secret contains JSON with `username` and `password` keys (required by ECS):
+
+```powershell
+aws secretsmanager put-secret-value `
+  --secret-id eyedar-prod-db-password-v3 `
+  --secret-string '{"username":"eyedar_admin","password":"<your-db-password>"}' `
+  --region us-east-1
+```
+
+Set API keys secret as either plain text or JSON with `api_key`:
+
+```powershell
+aws secretsmanager put-secret-value `
+  --secret-id eyedar-prod-api-keys-v3 `
+  --secret-string '{"api_key":"<your-api-key>","test":"true"}' `
+  --region us-east-1
+```
 
 ### Step 4: Database Migration
 
@@ -93,7 +111,7 @@ Replace `path\to\serviceAccountKey.json` with your actual file path.
 $RDS_HOST = terraform output -raw rds_address
 
 # Get DB password from Secrets Manager
-$DB_SECRET = aws secretsmanager get-secret-value --secret-id /eyedar/prod/db --query SecretString --output text --region us-east-1
+$DB_SECRET = aws secretsmanager get-secret-value --secret-id eyedar-prod-db-password-v3 --query SecretString --output text --region us-east-1
 $DB_CREDS = $DB_SECRET | ConvertFrom-Json
 
 # Connect to database (requires psql or pgAdmin)

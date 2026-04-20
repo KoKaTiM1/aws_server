@@ -15,7 +15,10 @@ resource "aws_secretsmanager_secret" "db" {
 resource "aws_secretsmanager_secret_version" "db" {
   count             = var.db_password != "" ? 1 : 0
   secret_id         = aws_secretsmanager_secret.db.id
-  secret_string     = var.db_password
+  secret_string     = jsonencode({
+    username = var.db_username
+    password = var.db_password
+  })
   depends_on        = [aws_secretsmanager_secret.db]
 }
 

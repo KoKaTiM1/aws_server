@@ -11,6 +11,34 @@ variable "region" {
   default     = "us-east-1"
 }
 
+# Secrets Configuration (provided by CI via TF_VAR_*)
+variable "db_username" {
+  description = "Database username stored in Secrets Manager JSON"
+  type        = string
+  default     = "eyedar_admin"
+}
+
+variable "db_password" {
+  description = "Database password stored in Secrets Manager JSON"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "firebase_key" {
+  description = "Firebase service account JSON string"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "api_keys" {
+  description = "API keys JSON/string payload"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 # Network Configuration
 variable "vpc_cidr" {
   description = "CIDR block for VPC"
