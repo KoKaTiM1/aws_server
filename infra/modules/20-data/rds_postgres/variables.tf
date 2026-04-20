@@ -30,6 +30,13 @@ variable "db_secret_arn" {
   type        = string
 }
 
+variable "db_password" {
+  description = "Database master password (must match Secrets Manager DB secret password)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "instance_class" {
   description = "RDS instance class"
   type        = string

@@ -98,6 +98,7 @@ module "rds" {
   security_group_id     = module.security_groups.sg_rds_id
   kms_key_arn           = module.kms.kms_key_arn
   db_secret_arn         = module.secrets.db_secret_arn
+  db_password           = var.db_password
   instance_class        = var.rds_instance_class
   allocated_storage     = var.rds_allocated_storage
   multi_az              = var.rds_multi_az

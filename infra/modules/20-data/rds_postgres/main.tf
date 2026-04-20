@@ -6,6 +6,10 @@ resource "random_password" "db" {
   override_special = "!#$%&*()-_=+[]{}<>:?"
 }
 
+locals {
+  effective_db_password = var.db_password != "" ? var.db_password : random_password.db.result
+}
+
 # DB Subnet Group
 resource "aws_db_subnet_group" "main" {
   name       = "eyedar-${var.env_name}-db-subnet-group"
@@ -57,7 +61,9 @@ resource "aws_db_instance" "main" {
 
   db_name  = "eyedar"
   username = "eyedar_admin"
-  password = random_password.db.result
+  password = local.effective_db_password
+
+  apply_immediately = true
 
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [var.security_group_id]
@@ -81,7 +87,6 @@ resource "aws_db_instance" "main" {
 
   lifecycle {
     ignore_changes = [
-      password,
       final_snapshot_identifier
     ]
   }
