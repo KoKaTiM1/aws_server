@@ -8,6 +8,27 @@ variable "kms_key_arn" {
   type        = string
 }
 
+variable "db_password" {
+  description = "Database password for secret"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "firebase_key" {
+  description = "Firebase service account key (JSON string)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "api_keys" {
+  description = "API keys configuration (JSON string)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "tags" {
   description = "Common tags applied to all resources"
   type        = map(string)
