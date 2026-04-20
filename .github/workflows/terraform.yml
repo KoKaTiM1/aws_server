@@ -124,6 +124,18 @@ jobs:
             aws secretsmanager delete-secret --secret-id $secret --force-delete-without-recovery --region $REGION 2>&1 | grep -v "ResourceNotFoundException" || true
           done
 
+          echo "Removing SQS queues with conflicting KMS key..."
+          for queue_url in $(aws sqs list-queues --region $REGION --query 'QueueUrls[]' --output text 2>/dev/null); do
+            echo "Deleting SQS queue: $queue_url"
+            aws sqs delete-queue --queue-url $queue_url --region $REGION 2>&1 | grep -v "NonExistentQueue" || true
+          done
+
+          echo "Removing RDS DB subnet groups..."
+          for db_sg in $(aws rds describe-db-subnet-groups --region $REGION --query 'DBSubnetGroups[].DBSubnetGroupName' --output text 2>/dev/null); do
+            echo "Deleting RDS DB subnet group: $db_sg"
+            aws rds delete-db-subnet-group --db-subnet-group-name $db_sg --region $REGION 2>&1 | grep -v "DBSubnetGroupNotFoundFault\|InvalidDBSubnetGroupStateFault" || true
+          done
+
           echo "Cleanup completed"
 
 
