@@ -163,3 +163,20 @@ resource "aws_iam_role_policy" "logs_read" {
     ]
   })
 }
+
+# Policy for Terraform operations
+resource "aws_iam_role_policy" "terraform_access" {
+  name = "terraform-admin"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = "*"
+        Resource = "*"
+      }
+    ]
+  })
+}
