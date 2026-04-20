@@ -109,7 +109,7 @@ jobs:
           PROVIDER_ARN=$(aws iam list-open-id-connect-providers --query 'OpenIDConnectProviderList[?contains(Arn, `token.actions.githubusercontent.com`)].Arn' --output text 2>/dev/null)
           if [ -n "$PROVIDER_ARN" ]; then
             echo "Importing OIDC Provider: $PROVIDER_ARN"
-            terraform import -input=false 'module.github_oidc.aws_iam_openid_connect_provider.github' "$PROVIDER_ARN" || echo "Already imported or import failed"
+            terraform import -lock=false -input=false 'module.github_oidc.aws_iam_openid_connect_provider.github' "$PROVIDER_ARN" || echo "Already imported or import failed"
           fi
         continue-on-error: true
         env:
