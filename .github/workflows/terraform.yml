@@ -45,6 +45,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Create GitHub OIDC Provider
+        run: |
+          REGION="${{ env.AWS_REGION }}"
+          echo "Creating IAM OIDC Provider for GitHub Actions..."
+          aws iam create-open-id-connect-provider \
+            --url https://token.actions.githubusercontent.com \
+            --client-id-list sts.amazonaws.com \
+            --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1 1c58a3a8518e8759bf075b76b750d4f2df264fcd \
+            --region $REGION 2>&1 | grep -v "EntityAlreadyExists" || true
+          echo "OIDC Provider ready"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
