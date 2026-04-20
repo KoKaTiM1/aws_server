@@ -116,13 +116,6 @@ jobs:
           # Import IAM Role
           echo "Importing IAM Role: eyedar-prod-github-actions-deployer"
           terraform import -lock=false -input=false 'module.github_oidc.aws_iam_role.github_actions' eyedar-prod-github-actions-deployer || echo "Already imported or import failed"
-
-          # Import existing SQS queues
-          for queue_url in $(aws sqs list-queues --region us-east-1 --query 'QueueUrls[]' --output text 2>/dev/null); do
-            queue_name=$(echo "$queue_url" | rev | cut -d'/' -f1 | rev)
-            echo "Importing SQS Queue: $queue_name"
-            terraform import -lock=false -input=false "module.sqs.aws_sqs_queue.$queue_name" "$queue_url" 2>/dev/null || echo "Queue $queue_name: already imported or not managed"
-          done
         continue-on-error: true
         env:
           TF_VAR_domain_name: "example.com"
