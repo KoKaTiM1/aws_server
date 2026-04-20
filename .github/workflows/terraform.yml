@@ -252,7 +252,13 @@ jobs:
           echo "=== Step 13: Releasing Elastic IPs ==="
           for alloc_id in $(aws ec2 describe-addresses --region $REGION --query 'Addresses[].AllocationId' --output text 2>/dev/null); do
             echo "Releasing EIP: $alloc_id"
-            aws ec2 release-address --allocation-id $alloc_id --region $REGION 2>&1 | grep -v "InvalidAllocationID" || true
+            aws ec2 release-address --allocation-id $alloc_id --region $REGION 2>&1 | grep -v "InvalidAllocationID\|AuthFailure" || true
+          done
+
+          echo "=== Step 13b: Disassociating remaining Elastic IPs ==="
+          for assoc_id in $(aws ec2 describe-addresses --region $REGION --query 'Addresses[?AssociationId].AssociationId' --output text 2>/dev/null); do
+            echo "Disassociating EIP: $assoc_id"
+            aws ec2 disassociate-address --association-id $assoc_id --region $REGION 2>&1 | grep -v "InvalidAssociationID\|AuthFailure" || true
           done
 
           echo "=== Step 14: Waiting for propagation (30 seconds) ==="
