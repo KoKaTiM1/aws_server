@@ -136,6 +136,15 @@ jobs:
             aws rds delete-db-subnet-group --db-subnet-group-name $db_sg --region $REGION 2>&1 | grep -v "DBSubnetGroupNotFoundFault\|InvalidDBSubnetGroupStateFault" || true
           done
 
+          echo "Removing IAM OIDC Provider for GitHub Actions..."
+          OIDC_ARN=$(aws iam list-open-id-connect-providers --query "OpenIDConnectProviderList[?contains(OpenIDConnectProviderArn, 'token.actions.githubusercontent.com')].OpenIDConnectProviderArn" --output text 2>/dev/null)
+          if [ -n "$OIDC_ARN" ] && [ "$OIDC_ARN" != "None" ]; then
+            for arn in $OIDC_ARN; do
+              echo "Deleting OIDC Provider: $arn"
+              aws iam delete-open-id-connect-provider --open-id-connect-provider-arn $arn 2>&1 | grep -v "NoSuchEntity" || true
+            done
+          fi
+
           echo "Cleanup completed"
 
 
