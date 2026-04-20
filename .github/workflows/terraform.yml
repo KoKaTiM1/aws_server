@@ -191,6 +191,12 @@ jobs:
           echo "=== Step 6: Waiting for RDS and ElastiCache deletion (120 seconds) ==="
           sleep 120
 
+          echo "=== Step 6b: Deleting all subnets in VPC ==="
+          for subnet in $(aws ec2 describe-subnets --region $REGION --query 'Subnets[].SubnetId' --output text 2>/dev/null); do
+            echo "Deleting subnet: $subnet"
+            aws ec2 delete-subnet --subnet-id $subnet --region $REGION 2>&1 | grep -v "InvalidSubnetID\|DependencyViolation" || true
+          done
+
           echo "=== Step 7: Deleting ElastiCache subnet groups ==="
           for subnet_group in $(aws elasticache describe-cache-subnet-groups --region $REGION --query 'CacheSubnetGroups[].CacheSubnetGroupName' --output text 2>/dev/null); do
             echo "Deleting ElastiCache subnet group: $subnet_group"
@@ -239,6 +245,33 @@ jobs:
 
           echo "=== Step 14: Waiting for propagation (30 seconds) ==="
           sleep 30
+
+          echo "=== Diagnostic: Checking ALL remaining resources in VPC ==="
+          VPC_ID=$(aws ec2 describe-vpcs --region $REGION --query 'Vpcs[0].VpcId' --output text 2>/dev/null)
+          if [ -n "$VPC_ID" ] && [ "$VPC_ID" != "None" ]; then
+            echo "VPC ID: $VPC_ID"
+
+            echo "--- Network Interfaces in VPC ---"
+            aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=$VPC_ID" --region $REGION --query 'NetworkInterfaces[].{ID:NetworkInterfaceId,Type:InterfaceType,Status:Status,Description:Description}' 2>/dev/null || true
+
+            echo "--- Security Groups in VPC ---"
+            aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" --region $REGION --query 'SecurityGroups[].{ID:GroupId,Name:GroupName,IngressRules:IpPermissions,EgressRules:IpPermissionsEgress}' 2>/dev/null || true
+
+            echo "--- Route Tables in VPC ---"
+            aws ec2 describe-route-tables --filters "Name=vpc-id,Values=$VPC_ID" --region $REGION --query 'RouteTables[].{ID:RouteTableId,Routes:Routes,Associations:Associations}' 2>/dev/null || true
+
+            echo "--- Network ACLs in VPC ---"
+            aws ec2 describe-network-acls --filters "Name=vpc-id,Values=$VPC_ID" --region $REGION --query 'NetworkAcls[].{ID:NetworkAclId,Entries:Entries}' 2>/dev/null || true
+
+            echo "--- VPC Endpoints in VPC ---"
+            aws ec2 describe-vpc-endpoints --filters "Name=vpc-id,Values=$VPC_ID" --region $REGION --query 'VpcEndpoints[].{ID:VpcEndpointId,ServiceName:ServiceName,State:State}' 2>/dev/null || true
+          fi
+
+          echo "=== Step 15: Deleting VPCs manually to avoid terraform errors ==="
+          for vpc in $(aws ec2 describe-vpcs --region $REGION --query 'Vpcs[].VpcId' --output text 2>/dev/null); do
+            echo "Deleting VPC: $vpc"
+            aws ec2 delete-vpc --vpc-id $vpc --region $REGION 2>&1 | grep -v "InvalidVpcID\|DependencyViolation" || true
+          done
 
           echo "=== Cleanup completed ==="
 
