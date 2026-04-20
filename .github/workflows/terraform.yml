@@ -164,17 +164,6 @@ jobs:
             fi
           done
 
-          echo "Removing IAM Role for GitHub Actions..."
-          ROLE_NAME="eyedar-prod-github-actions-deployer"
-          # First, delete all inline policies attached to the role
-          for policy_name in $(aws iam list-role-policies --role-name $ROLE_NAME --query 'PolicyNames[]' --output text 2>/dev/null); do
-            echo "Deleting inline policy: $policy_name"
-            aws iam delete-role-policy --role-name $ROLE_NAME --policy-name $policy_name 2>&1 | grep -v "NoSuchEntity" || true
-          done
-          # Then delete the role
-          echo "Deleting IAM Role: $ROLE_NAME"
-          aws iam delete-role --role-name $ROLE_NAME 2>&1 | grep -v "NoSuchEntity" || true
-
           echo "Cleanup completed"
 
 
