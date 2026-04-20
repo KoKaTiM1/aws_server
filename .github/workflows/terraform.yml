@@ -249,6 +249,12 @@ jobs:
             aws ec2 delete-network-acl --network-acl-id $nacl --region $REGION 2>&1 | grep -v "InvalidNetworkAclID\|DependencyViolation" || true
           done
 
+          echo "=== Step 12b: Deleting NAT Gateways ==="
+          for nat_gw in $(aws ec2 describe-nat-gateways --region $REGION --filter "Name=state,Values=available,pending" --query 'NatGateways[].NatGatewayId' --output text 2>/dev/null); do
+            echo "Deleting NAT Gateway: $nat_gw"
+            aws ec2 delete-nat-gateway --nat-gateway-id $nat_gw --region $REGION 2>&1 | grep -v "InvalidNatGatewayID" || true
+          done
+
           echo "=== Step 13: Releasing Elastic IPs ==="
           for alloc_id in $(aws ec2 describe-addresses --region $REGION --query 'Addresses[].AllocationId' --output text 2>/dev/null); do
             echo "Releasing EIP: $alloc_id"
