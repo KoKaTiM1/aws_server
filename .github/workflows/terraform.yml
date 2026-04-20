@@ -119,6 +119,15 @@ jobs:
         run: |
           REGION="${{ env.AWS_REGION }}"
 
+          echo "Clearing stale Terraform locks..."
+          TABLE="eyedar-prod-terraform-locks"
+          aws dynamodb scan --table-name $TABLE --region $REGION --query 'Items[*].LockID.S' --output text 2>/dev/null | tr '\t' '\n' | while read lock_id; do
+            if [ -n "$lock_id" ]; then
+              echo "Deleting lock: $lock_id"
+              aws dynamodb delete-item --table-name $TABLE --key "{\"LockID\":{\"S\":\"$lock_id\"}}" --region $REGION 2>/dev/null || true
+            fi
+          done
+
           echo "Removing Secrets Manager secrets scheduled for deletion..."
           for secret in eyedar-prod-db-password-v3 eyedar-prod-firebase-key-v3 eyedar-prod-api-keys-v3; do
             aws secretsmanager delete-secret --secret-id $secret --force-delete-without-recovery --region $REGION 2>&1 | grep -v "ResourceNotFoundException" || true
