@@ -158,6 +158,12 @@ jobs:
           CLUSTER="eyedar-prod"
           REGION="${{ env.AWS_REGION }}"
 
+          echo "=== Diagnostic: Checking what's using the subnets ==="
+          for subnet_id in subnet-02adf092fc9e0c6c7 subnet-0fb9d98c90e2dbcee; do
+            echo "Checking dependencies for subnet: $subnet_id"
+            aws ec2 describe-network-interfaces --filters "Name=subnet-id,Values=$subnet_id" --region $REGION --query 'NetworkInterfaces[].{ID:NetworkInterfaceId,Type:InterfaceType,Status:Status,Description:Description,Attachment:Attachment}' 2>/dev/null || true
+          done
+
           echo "=== Step 1: Deleting ECS services ==="
           for service in eyedar-prod-api eyedar-prod-worker-ingest eyedar-prod-worker-verify eyedar-prod-worker-notify eyedar-prod-rust-api eyedar-prod-mqtt-monitor; do
             echo "Deleting service: $service"
@@ -191,25 +197,42 @@ jobs:
             aws elasticache delete-cache-subnet-group --cache-subnet-group-name $subnet_group --region $REGION 2>&1 | grep -v "CacheSubnetGroupNotFoundFault\|InvalidCacheSubnetGroupStateFault" || true
           done
 
-          echo "=== Step 8: Deleting load balancers ==="
+          echo "=== Step 8: Deleting target groups ==="
+          for tg_arn in $(aws elbv2 describe-target-groups --region $REGION --query 'TargetGroups[].TargetGroupArn' --output text 2>/dev/null); do
+            echo "Deleting target group: $tg_arn"
+            aws elbv2 delete-target-group --target-group-arn $tg_arn --region $REGION 2>&1 | grep -v "TargetGroupNotFound" || true
+          done
+
+          echo "=== Step 9: Deleting load balancers ==="
           for alb_arn in $(aws elbv2 describe-load-balancers --region $REGION --query 'LoadBalancers[].LoadBalancerArn' --output text 2>/dev/null); do
             echo "Deleting load balancer: $alb_arn"
             aws elbv2 delete-load-balancer --load-balancer-arn $alb_arn --region $REGION 2>&1 | grep -v "LoadBalancerNotFoundException" || true
           done
 
-          echo "=== Step 9: Cleaning up network interfaces in VPC ==="
-          for eni in $(aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=vpc-*" --region $REGION --query 'NetworkInterfaces[].NetworkInterfaceId' --output text 2>/dev/null); do
+          echo "=== Step 10: Detaching and deleting network interfaces ==="
+          for eni in $(aws ec2 describe-network-interfaces --region $REGION --query 'NetworkInterfaces[].NetworkInterfaceId' --output text 2>/dev/null); do
+            echo "Processing ENI: $eni"
+            # Get attachment info
+            attachment=$(aws ec2 describe-network-interfaces --network-interface-ids $eni --region $REGION --query 'NetworkInterfaces[0].Attachment' 2>/dev/null)
+            if [ "$attachment" != "None" ] && [ -n "$attachment" ]; then
+              attachment_id=$(echo $attachment | grep -o '"AttachmentId": "[^"]*' | cut -d'"' -f4)
+              if [ -n "$attachment_id" ]; then
+                echo "Detaching ENI: $eni (attachment: $attachment_id)"
+                aws ec2 detach-network-interface --attachment-id $attachment_id --region $REGION 2>&1 | grep -v "InvalidAttachmentID" || true
+                sleep 5
+              fi
+            fi
             echo "Deleting ENI: $eni"
             aws ec2 delete-network-interface --network-interface-id $eni --region $REGION 2>&1 | grep -v "InvalidNetworkInterfaceID\|InvalidNetworkInterfaceInUse" || true
           done
 
-          echo "=== Step 10: Releasing Elastic IPs ==="
+          echo "=== Step 11: Releasing Elastic IPs ==="
           for alloc_id in $(aws ec2 describe-addresses --region $REGION --query 'Addresses[].AllocationId' --output text 2>/dev/null); do
             echo "Releasing EIP: $alloc_id"
             aws ec2 release-address --allocation-id $alloc_id --region $REGION 2>&1 | grep -v "InvalidAllocationID" || true
           done
 
-          echo "=== Step 11: Waiting for propagation (30 seconds) ==="
+          echo "=== Step 12: Waiting for propagation (30 seconds) ==="
           sleep 30
 
           echo "=== Cleanup completed ==="
