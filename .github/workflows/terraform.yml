@@ -215,13 +215,29 @@ jobs:
             aws ec2 delete-vpc-endpoints --vpc-endpoint-ids $vpce --region $REGION 2>&1 | grep -v "InvalidVpcEndpointId" || true
           done
 
-          echo "=== Step 11: Releasing Elastic IPs ==="
+          echo "=== Step 11: Deleting custom route tables ==="
+          for rt in $(aws ec2 describe-route-tables --region $REGION --query 'RouteTables[?Associations[0].Main!=`true`].RouteTableId' --output text 2>/dev/null); do
+            echo "Deleting route table: $rt"
+            # First disassociate from subnets
+            for assoc in $(aws ec2 describe-route-tables --route-table-ids $rt --region $REGION --query 'RouteTables[0].Associations[?Main!=`true`].RouteTableAssociationId' --output text 2>/dev/null); do
+              aws ec2 disassociate-route-table --association-id $assoc --region $REGION 2>&1 | grep -v "InvalidAssociationID" || true
+            done
+            aws ec2 delete-route-table --route-table-id $rt --region $REGION 2>&1 | grep -v "InvalidRouteTableID\|DependencyViolation" || true
+          done
+
+          echo "=== Step 12: Deleting custom network ACLs ==="
+          for nacl in $(aws ec2 describe-network-acls --region $REGION --query 'NetworkAcls[?IsDefault!=`true`].NetworkAclId' --output text 2>/dev/null); do
+            echo "Deleting network ACL: $nacl"
+            aws ec2 delete-network-acl --network-acl-id $nacl --region $REGION 2>&1 | grep -v "InvalidNetworkAclID\|DependencyViolation" || true
+          done
+
+          echo "=== Step 13: Releasing Elastic IPs ==="
           for alloc_id in $(aws ec2 describe-addresses --region $REGION --query 'Addresses[].AllocationId' --output text 2>/dev/null); do
             echo "Releasing EIP: $alloc_id"
             aws ec2 release-address --allocation-id $alloc_id --region $REGION 2>&1 | grep -v "InvalidAllocationID" || true
           done
 
-          echo "=== Step 12: Waiting for propagation (30 seconds) ==="
+          echo "=== Step 14: Waiting for propagation (30 seconds) ==="
           sleep 30
 
           echo "=== Cleanup completed ==="
