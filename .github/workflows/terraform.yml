@@ -45,6 +45,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID_A }}:role/eyedar-prod-github-actions-deployer
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Create GitHub OIDC Provider
         run: |
           REGION="${{ env.AWS_REGION }}"
@@ -55,12 +61,6 @@ jobs:
             --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1 1c58a3a8518e8759bf075b76b750d4f2df264fcd \
             --region $REGION 2>&1 | grep -v "EntityAlreadyExists" || true
           echo "OIDC Provider ready"
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID_A }}:role/eyedar-prod-github-actions-deployer
-          aws-region: ${{ env.AWS_REGION }}
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
