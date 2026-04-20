@@ -43,7 +43,7 @@ jobs:
 
       - name: Create ECR repositories if they don't exist
         run: |
-          REPOS=("eyedar-api" "eyedar-worker-ingest" "eyedar-worker-verify" "eyedar-worker-notify" "eyedar-rust-api" "eyedar-mqtt-monitor")
+          REPOS=("eyedar-prod-api" "eyedar-prod-worker-ingest" "eyedar-prod-worker-verify" "eyedar-prod-worker-notify" "eyedar-prod-rust-api" "eyedar-prod-mqtt-monitor")
           for repo in "${REPOS[@]}"; do
             aws ecr describe-repositories --repository-names "$repo" --region ${{ env.AWS_REGION }} 2>/dev/null || \
             aws ecr create-repository --repository-name "$repo" --region ${{ env.AWS_REGION }}
@@ -55,8 +55,8 @@ jobs:
           context: ./workers/api
           push: ${{ github.ref == 'refs/heads/main' }}
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/eyedar-api:latest
-            ${{ steps.login-ecr.outputs.registry }}/eyedar-api:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-prod-api:latest
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-prod-api:${{ github.sha }}
 
       - name: Build and push worker-ingest image
         uses: docker/build-push-action@v5
@@ -65,8 +65,8 @@ jobs:
           push: ${{ github.ref == 'refs/heads/main' }}
           no-cache: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-ingest:latest
-            ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-ingest:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-prod-worker-ingest:latest
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-prod-worker-ingest:${{ github.sha }}
 
       - name: Build and push worker-verify image
         uses: docker/build-push-action@v5
@@ -75,8 +75,8 @@ jobs:
           push: ${{ github.ref == 'refs/heads/main' }}
           no-cache: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-verify:latest
-            ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-verify:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-prod-worker-verify:latest
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-prod-worker-verify:${{ github.sha }}
 
       - name: Build and push worker-notify image
         uses: docker/build-push-action@v5
@@ -84,8 +84,8 @@ jobs:
           context: ./workers/worker-notify
           push: ${{ github.ref == 'refs/heads/main' }}
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-notify:latest
-            ${{ steps.login-ecr.outputs.registry }}/eyedar-worker-notify:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-prod-worker-notify:latest
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-prod-worker-notify:${{ github.sha }}
 
       - name: Build and push rust_api image
         uses: docker/build-push-action@v5
@@ -95,8 +95,8 @@ jobs:
           push: ${{ github.ref == 'refs/heads/main' }}
           no-cache: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/eyedar-rust-api:latest
-            ${{ steps.login-ecr.outputs.registry }}/eyedar-rust-api:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-prod-rust-api:latest
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-prod-rust-api:${{ github.sha }}
 
       - name: Build and push mqtt-monitor image
         uses: docker/build-push-action@v5
@@ -104,19 +104,19 @@ jobs:
           context: ./services/mqtt-monitor
           push: ${{ github.ref == 'refs/heads/main' }}
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/eyedar-mqtt-monitor:latest
-            ${{ steps.login-ecr.outputs.registry }}/eyedar-mqtt-monitor:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-prod-mqtt-monitor:latest
+            ${{ steps.login-ecr.outputs.registry }}/eyedar-prod-mqtt-monitor:${{ github.sha }}
 
       - name: Output image URIs
         id: image
         run: |
           REGISTRY=${{ steps.login-ecr.outputs.registry }}
-          echo "api_image=${REGISTRY}/eyedar-api:${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "worker_ingest_image=${REGISTRY}/eyedar-worker-ingest:${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "worker_verify_image=${REGISTRY}/eyedar-worker-verify:${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "worker_notify_image=${REGISTRY}/eyedar-worker-notify:${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "rust_api_image=${REGISTRY}/eyedar-rust-api:${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "mqtt_monitor_image=${REGISTRY}/eyedar-mqtt-monitor:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "api_image=${REGISTRY}/eyedar-prod-api:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "worker_ingest_image=${REGISTRY}/eyedar-prod-worker-ingest:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "worker_verify_image=${REGISTRY}/eyedar-prod-worker-verify:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "worker_notify_image=${REGISTRY}/eyedar-prod-worker-notify:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "rust_api_image=${REGISTRY}/eyedar-prod-rust-api:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "mqtt_monitor_image=${REGISTRY}/eyedar-prod-mqtt-monitor:${{ github.sha }}" >> $GITHUB_OUTPUT
 
   deploy:
     needs: build
