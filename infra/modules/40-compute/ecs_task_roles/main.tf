@@ -38,9 +38,9 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
           "secretsmanager:GetSecretValue"
         ]
         Resource = [
-          var.secret_arns.db,
-          var.secret_arns.firebase,
-          var.secret_arns.api_keys
+          "${var.secret_arns.db}-*",
+          "${var.secret_arns.firebase}-*",
+          "${var.secret_arns.api_keys}-*"
         ]
       },
       {
@@ -109,9 +109,9 @@ resource "aws_iam_role_policy" "api" {
           "secretsmanager:GetSecretValue"
         ]
         Resource = [
-          var.secret_arns.db,
-          var.secret_arns.firebase,
-          var.secret_arns.api_keys
+          "${var.secret_arns.db}-*",
+          "${var.secret_arns.firebase}-*",
+          "${var.secret_arns.api_keys}-*"
         ]
       },
       {
@@ -181,8 +181,8 @@ resource "aws_iam_role_policy" "rust_api" {
           "secretsmanager:GetSecretValue"
         ]
         Resource = [
-          var.secret_arns.api_keys,
-          var.secret_arns.db
+          "${var.secret_arns.api_keys}-*",
+          "${var.secret_arns.db}-*"
         ]
       },
       {
@@ -241,7 +241,7 @@ resource "aws_iam_role_policy" "worker_ingest" {
           "secretsmanager:GetSecretValue"
         ]
         Resource = [
-          var.secret_arns.db
+          "${var.secret_arns.db}-*"
         ]
       },
       {
@@ -306,7 +306,7 @@ resource "aws_iam_role_policy" "worker_verify" {
           "secretsmanager:GetSecretValue"
         ]
         Resource = [
-          var.secret_arns.db
+          "${var.secret_arns.db}-*"
         ]
       },
       {
@@ -364,8 +364,8 @@ resource "aws_iam_role_policy" "worker_notify" {
           "secretsmanager:GetSecretValue"
         ]
         Resource = [
-          var.secret_arns.db,
-          var.secret_arns.firebase
+          "${var.secret_arns.db}-*",
+          "${var.secret_arns.firebase}-*"
         ]
       },
       {
