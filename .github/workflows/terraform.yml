@@ -68,7 +68,7 @@ jobs:
         continue-on-error: true
 
       - name: Recreate Terraform Backend (For Destroy)
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+        if: github.event_name == 'workflow_dispatch' 
         run: |
           REGION="${{ env.AWS_REGION }}"
           BUCKET="eyedar-prod-terraform-state"
