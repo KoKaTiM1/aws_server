@@ -68,7 +68,7 @@ jobs:
         continue-on-error: true
 
       - name: Recreate Terraform Backend (For Destroy)
-        if: github.event_name == 'workflow_dispatch' 
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
         run: |
           REGION="${{ env.AWS_REGION }}"
           BUCKET="eyedar-prod-terraform-state"
@@ -111,6 +111,23 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
+      - name: Guard Against Empty Remote State Drift
+        if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
+        run: |
+          set -e
+
+          STATE_COUNT=$(terraform state list 2>/dev/null | wc -l | tr -d ' ')
+          CLUSTER_STATUS=$(aws ecs describe-clusters --clusters eyedar-prod --region ${{ env.AWS_REGION }} --query 'clusters[0].status' --output text 2>/dev/null || echo "NONE")
+
+          echo "Terraform state resources: ${STATE_COUNT}"
+          echo "Live ECS cluster status: ${CLUSTER_STATUS}"
+
+          if [ "${STATE_COUNT}" = "0" ] && [ "${CLUSTER_STATUS}" = "ACTIVE" ]; then
+            echo "❌ Refusing apply: backend state is empty while live infrastructure exists."
+            echo "Recover/import state first to avoid destructive drift and duplicate resources."
+            exit 1
+          fi
+
       - name: Import Existing Resources
         run: |
           # Import OIDC Provider
@@ -144,8 +161,8 @@ jobs:
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
           TF_VAR_firebase_key: ${{ secrets.FIREBASE_KEY }}
 
-      - name: Cleanup Conflicting Resources (Pre-Apply)
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply'
+      - name: Cleanup Conflicting Resources (Pre-Destroy)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
         run: |
           REGION="${{ env.AWS_REGION }}"
 
@@ -205,6 +222,14 @@ jobs:
           TF_VAR_api_keys: ${{ secrets.API_KEYS }}
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
           TF_VAR_firebase_key: ${{ secrets.FIREBASE_KEY }}
+
+      - name: Verify Remote State Saved
+        if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
+        run: |
+          aws s3api head-object \
+            --bucket eyedar-prod-terraform-state \
+            --key prod/terraform.tfstate \
+            --region ${{ env.AWS_REGION }}
 
       - name: Cleanup AWS Resources (Manual)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
