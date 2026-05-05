@@ -255,7 +255,8 @@ resource "aws_iam_role_policy" "worker_ingest" {
       {
         Effect = "Allow"
         Action = [
-          "kms:Decrypt"
+          "kms:Decrypt",
+          "kms:GenerateDataKey"
         ]
         Resource = var.kms_key_arn
       }
