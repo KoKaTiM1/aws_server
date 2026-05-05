@@ -206,7 +206,8 @@ resource "aws_ecs_task_definition" "worker_ingest" {
       { name = "DB_NAME", value = var.environment_vars.rds_db_name },
       { name = "REDIS_HOST", value = var.environment_vars.redis_host },
       { name = "REDIS_PORT", value = var.environment_vars.redis_port },
-      { name = "SQS_QUEUE_URL_DETECTION", value = var.environment_vars.sqs_queue_url_detection },
+      { name = "QUEUE_URL_INGEST", value = var.environment_vars.sqs_queue_url_detection },
+      { name = "QUEUE_URL_VERIFY", value = var.environment_vars.sqs_queue_url_verify },
       { name = "AWS_REGION", value = data.aws_region.current.name }
     ]
 

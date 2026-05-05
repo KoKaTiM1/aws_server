@@ -238,6 +238,14 @@ resource "aws_iam_role_policy" "worker_ingest" {
       {
         Effect = "Allow"
         Action = [
+          "sqs:SendMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = var.sqs_queue_arns.verify_requested
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "secretsmanager:GetSecretValue"
         ]
         Resource = [
