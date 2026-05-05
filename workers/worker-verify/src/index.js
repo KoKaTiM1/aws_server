@@ -11,6 +11,8 @@ const QUEUE_URL_VERIFY = process.env.QUEUE_URL_VERIFY;
 const QUEUE_URL_NOTIFY = process.env.QUEUE_URL_NOTIFY;
 const S3_BUCKET = process.env.S3_BUCKET;
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // ============ GRACEFUL SHUTDOWN ============
 let isShuttingDown = false;
 
@@ -122,64 +124,63 @@ async function deleteMessage(receiptHandle) {
 }
 
 // ============ MAIN CONSUMER LOOP ============
-async function pollMessages() {
+async function processMessage(message) {
   try {
-    const params = {
-      QueueUrl: QUEUE_URL_VERIFY,
-      MaxNumberOfMessages: 5, // CPU-intensive, process fewer at a time
-      WaitTimeSeconds: 20,
-    };
+    const verifyMessage = JSON.parse(message.Body);
 
-    const command = new ReceiveMessageCommand(params);
-    const response = await sqsClient.send(command);
+    console.log(`[VERIFY] Processing detection: ${verifyMessage.detection_id}`);
 
-    if (!response.Messages) {
-      return;
-    }
-
-    for (const message of response.Messages) {
-      try {
-        const verifyMessage = JSON.parse(message.Body);
-
-        console.log(`[VERIFY] Processing detection: ${verifyMessage.detection_id}`);
-
-        // 1. Fetch images from S3 (if needed)
-        const images = [];
-        for (const imageUrl of (verifyMessage.images || [])) {
-          const imageBuffer = await fetchImageFromS3(imageUrl);
-          if (imageBuffer) {
-            images.push(imageBuffer);
-          }
-        }
-
-        // 2. Run verification
-        const verificationResult = await verifyDetection(verifyMessage, images);
-        console.log(`[VERIFY] Result: verified=${verificationResult.verified}, confidence=${verificationResult.confidence}`);
-
-        // 3. Update detection record in RDS
-        await updateDetectionVerification(verifyMessage.detection_id, verificationResult);
-
-        // 4. Publish verified_animals message
-        await publishNotifyMessage(verifyMessage, verificationResult);
-
-        // 5. Delete message from queue
-        await deleteMessage(message.ReceiptHandle);
-
-        console.log(`[VERIFY] ✅ Successfully verified detection: ${verifyMessage.detection_id}`);
-
-      } catch (err) {
-        console.error(`[ERROR] Failed to process message: ${err.message}`);
-        // TODO: Send to DLQ if max retries exceeded
-        // For now, leave in queue to retry (SQS visibility timeout will re-deliver)
+    // 1. Fetch images from S3 (if needed)
+    const images = [];
+    for (const imageUrl of (verifyMessage.images || [])) {
+      const imageBuffer = await fetchImageFromS3(imageUrl);
+      if (imageBuffer) {
+        images.push(imageBuffer);
       }
     }
-  } catch (err) {
-    console.error(`[POLL ERROR] ${err.message}`);
-  }
 
-  // Continue polling if not shutting down
-  if (!isShuttingDown) {
-    setTimeout(pollMessages, 1000);
+    // 2. Run verification
+    const verificationResult = await verifyDetection(verifyMessage, images);
+    console.log(`[VERIFY] Result: verified=${verificationResult.verified}, confidence=${verificationResult.confidence}`);
+
+    // 3. Update detection record in RDS
+    await updateDetectionVerification(verifyMessage.detection_id, verificationResult);
+
+    // 4. Publish verified_animals message
+    await publishNotifyMessage(verifyMessage, verificationResult);
+
+    // 5. Delete message from queue
+    await deleteMessage(message.ReceiptHandle);
+
+    console.log(`[VERIFY] ✅ Successfully verified detection: ${verifyMessage.detection_id}`);
+  } catch (err) {
+    console.error(`[ERROR] Failed to process message: ${err.message}`);
+    // TODO: Send to DLQ if max retries exceeded
+    // For now, leave in queue to retry (SQS visibility timeout will re-deliver)
+  }
+}
+
+async function pollMessages() {
+  while (!isShuttingDown) {
+    try {
+      const params = {
+        QueueUrl: QUEUE_URL_VERIFY,
+        MaxNumberOfMessages: 5, // CPU-intensive, process fewer at a time
+        WaitTimeSeconds: 20,
+      };
+
+      const command = new ReceiveMessageCommand(params);
+      const response = await sqsClient.send(command);
+
+      if (!response.Messages || response.Messages.length === 0) {
+        continue;
+      }
+
+      await Promise.allSettled(response.Messages.map((message) => processMessage(message)));
+    } catch (err) {
+      console.error(`[POLL ERROR] ${err.message}`);
+      await delay(1000);
+    }
   }
 }
 

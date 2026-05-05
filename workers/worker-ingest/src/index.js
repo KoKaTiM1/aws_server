@@ -24,6 +24,8 @@ const pool = new Pool(databaseUrl ?
 const QUEUE_URL_INGEST = process.env.QUEUE_URL_INGEST;
 const QUEUE_URL_VERIFY = process.env.QUEUE_URL_VERIFY;
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // ============ GRACEFUL SHUTDOWN ============
 let isShuttingDown = false;
 
@@ -126,51 +128,50 @@ async function deleteMessage(receiptHandle) {
 }
 
 // ============ MAIN CONSUMER LOOP ============
-async function pollMessages() {
+async function processMessage(message) {
   try {
-    const params = {
-      QueueUrl: QUEUE_URL_INGEST,
-      MaxNumberOfMessages: 10,
-      WaitTimeSeconds: 20,
-    };
+    const detection = JSON.parse(message.Body);
 
-    const command = new ReceiveMessageCommand(params);
-    const response = await sqsClient.send(command);
+    console.log(`[INGEST] Processing detection from device: ${detection.device_id}`);
 
-    if (!response.Messages) {
-      return;
-    }
+    // 1. Write detection to RDS
+    const detectionId = await writeDetectionToRDS(detection);
 
-    for (const message of response.Messages) {
-      try {
-        const detection = JSON.parse(message.Body);
+    // 2. Publish verify_requested message
+    await publishVerifyMessage(detectionId, detection);
 
-        console.log(`[INGEST] Processing detection from device: ${detection.device_id}`);
+    // 3. Delete message from queue
+    await deleteMessage(message.ReceiptHandle);
 
-        // 1. Write detection to RDS
-        const detectionId = await writeDetectionToRDS(detection);
-
-        // 2. Publish verify_requested message
-        await publishVerifyMessage(detectionId, detection);
-
-        // 3. Delete message from queue
-        await deleteMessage(message.ReceiptHandle);
-
-        console.log(`[INGEST] ✅ Successfully processed detection: ${detectionId}`);
-
-      } catch (err) {
-        console.error(`[ERROR] Failed to process message: ${err.message}`);
-        // TODO: Send to DLQ if max retries exceeded
-        // For now, leave in queue to retry (SQS visibility timeout will re-deliver)
-      }
-    }
+    console.log(`[INGEST] ✅ Successfully processed detection: ${detectionId}`);
   } catch (err) {
-    console.error(`[POLL ERROR] ${err.message}`);
+    console.error(`[ERROR] Failed to process message: ${err.message}`);
+    // TODO: Send to DLQ if max retries exceeded
+    // For now, leave in queue to retry (SQS visibility timeout will re-deliver)
   }
+}
 
-  // Continue polling if not shutting down
-  if (!isShuttingDown) {
-    setTimeout(pollMessages, 1000);
+async function pollMessages() {
+  while (!isShuttingDown) {
+    try {
+      const params = {
+        QueueUrl: QUEUE_URL_INGEST,
+        MaxNumberOfMessages: 10,
+        WaitTimeSeconds: 20,
+      };
+
+      const command = new ReceiveMessageCommand(params);
+      const response = await sqsClient.send(command);
+
+      if (!response.Messages || response.Messages.length === 0) {
+        continue;
+      }
+
+      await Promise.allSettled(response.Messages.map((message) => processMessage(message)));
+    } catch (err) {
+      console.error(`[POLL ERROR] ${err.message}`);
+      await delay(1000);
+    }
   }
 }
 

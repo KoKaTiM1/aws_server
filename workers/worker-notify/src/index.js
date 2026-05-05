@@ -21,6 +21,8 @@ const MAX_MESSAGES = 10;
 const WAIT_TIME_SECONDS = 20; // Long polling
 const MAX_ALERT_DISTANCE_KM = 1.0; // 1000 meters
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // Database connection pool
 let dbPool;
 
@@ -300,50 +302,50 @@ async function processVerifiedAnimal(detection) {
 /**
  * Poll SQS queue for messages
  */
-async function pollQueue() {
+async function processMessage(message) {
   try {
-    const params = {
+    const detection = JSON.parse(message.Body);
+
+    // Process the detection
+    await processVerifiedAnimal(detection);
+
+    // Delete message from queue
+    await sqs.send(new DeleteMessageCommand({
       QueueUrl: QUEUE_URL,
-      MaxNumberOfMessages: MAX_MESSAGES,
-      WaitTimeSeconds: WAIT_TIME_SECONDS,
-      VisibilityTimeout: 60, // 1 minute to process
-      MessageAttributeNames: ['All']
-    };
+      ReceiptHandle: message.ReceiptHandle
+    }));
 
-    const data = await sqs.send(new ReceiveMessageCommand(params));
-
-    if (!data.Messages || data.Messages.length === 0) {
-      return 0;
-    }
-
-    console.log(`Received ${data.Messages.length} messages`);
-
-    for (const message of data.Messages) {
-      try {
-        const detection = JSON.parse(message.Body);
-
-        // Process the detection
-        await processVerifiedAnimal(detection);
-
-        // Delete message from queue
-        await sqs.send(new DeleteMessageCommand({
-          QueueUrl: QUEUE_URL,
-          ReceiptHandle: message.ReceiptHandle
-        }));
-
-        console.log(`✅ Message processed and deleted`);
-
-      } catch (error) {
-        console.error('Error processing message:', error);
-        // Message will become visible again after VisibilityTimeout
-      }
-    }
-
-    return data.Messages.length;
-
+    console.log(`✅ Message processed and deleted`);
   } catch (error) {
-    console.error('Error polling queue:', error);
-    return 0;
+    console.error('Error processing message:', error);
+    // Message will become visible again after VisibilityTimeout
+  }
+}
+
+async function pollQueue() {
+  while (true) {
+    try {
+      const params = {
+        QueueUrl: QUEUE_URL,
+        MaxNumberOfMessages: MAX_MESSAGES,
+        WaitTimeSeconds: WAIT_TIME_SECONDS,
+        VisibilityTimeout: 60, // 1 minute to process
+        MessageAttributeNames: ['All']
+      };
+
+      const data = await sqs.send(new ReceiveMessageCommand(params));
+
+      if (!data.Messages || data.Messages.length === 0) {
+        continue;
+      }
+
+      console.log(`Received ${data.Messages.length} messages`);
+      await Promise.allSettled(data.Messages.map((message) => processMessage(message)));
+
+    } catch (error) {
+      console.error('Error polling queue:', error);
+      await delay(1000);
+    }
   }
 }
 
@@ -363,15 +365,7 @@ async function main() {
     console.log('✅ Worker initialized, starting to poll queue...\n');
 
     // Main loop
-    while (true) {
-      try {
-        await pollQueue();
-      } catch (error) {
-        console.error('Error in main loop:', error);
-        // Wait a bit before retrying
-        await new Promise(resolve => setTimeout(resolve, 5000));
-      }
-    }
+    await pollQueue();
 
   } catch (error) {
     console.error('❌ Fatal error:', error);
