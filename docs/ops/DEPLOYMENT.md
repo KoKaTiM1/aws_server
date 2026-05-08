@@ -37,6 +37,48 @@ The DAR (Document Analysis & Recognition) system has been enhanced for animal de
 
 ## 🚀 Step-by-Step Deployment
 
+### Step 0: GitHub OIDC Bootstrap (one-time setup)
+
+This step prepares AWS IAM so GitHub Actions can run Terraform and deployments.
+
+Policy files used:
+- `infra/iam/github-oidc-trust-policy.json`
+- `infra/iam/github-actions-deployer-policy.json`
+
+Before running, replace `YOUR_ACCOUNT_ID` in `infra/iam/github-oidc-trust-policy.json`.
+
+```powershell
+$AWS_REGION = "us-east-1"
+$ACCOUNT_ID = aws sts get-caller-identity --query Account --output text
+
+# 1) Create OIDC provider (safe to re-run)
+aws iam create-open-id-connect-provider `
+  --url https://token.actions.githubusercontent.com `
+  --client-id-list sts.amazonaws.com `
+  --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1 `
+  --region $AWS_REGION 2>$null
+
+# 2) Create role (safe to re-run)
+aws iam create-role `
+  --role-name eyedar-prod-github-actions-deployer `
+  --assume-role-policy-document file://infra/iam/github-oidc-trust-policy.json `
+  --region $AWS_REGION 2>$null
+
+# 3) Update trust policy (required after any repo/branch change)
+aws iam update-assume-role-policy `
+  --role-name eyedar-prod-github-actions-deployer `
+  --policy-document file://infra/iam/github-oidc-trust-policy.json
+
+# 4) Attach deploy permissions policy (bootstrap policy)
+aws iam put-role-policy `
+  --role-name eyedar-prod-github-actions-deployer `
+  --policy-name eyedar-github-actions-deployer `
+  --policy-document file://infra/iam/github-actions-deployer-policy.json
+```
+
+Also set GitHub repository variable:
+- `AWS_ACCOUNT_ID_A = <your-account-id>`
+
 ### Step 1: Firebase Service Account
 
 1. Go to [Firebase Console](https://console.firebase.google.com/project/messageapp-40141)
