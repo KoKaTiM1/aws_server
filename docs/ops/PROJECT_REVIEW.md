@@ -363,6 +363,24 @@ print(json.dumps(output))
 
 ---
 
+### Phase 10: Documentation and README Maintenance (1-2 hours)
+**Goal:** Keep the project and service READMEs aligned with the real infrastructure and runtime behavior.
+
+**Still needed:**
+- Keep the root README focused on build, bootstrap, and deploy steps.
+- Keep `infra/README.md` aligned with the Terraform module tree and outputs.
+- Keep worker READMEs aligned with queue names, env vars, and container behavior.
+- Rebuild stale docs from the current system state instead of copying old notes forward.
+
+**Tasks:**
+- [ ] Refresh service READMEs when runtime behavior changes
+- [ ] Refresh infra README when Terraform outputs or bootstrap steps change
+- [ ] Remove or rewrite outdated operational notes when they drift from the stack
+
+**Success:** The repository documentation stays current with the deployed system.
+
+---
+
 ### Platform Setup Notes (from terraform_setup)
 **Goal:** Record the infrastructure-level items that already exist in `infra/` so the review matches the repo structure.
 

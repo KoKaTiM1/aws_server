@@ -7,12 +7,12 @@ ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
 # Array of services to build
 declare -a SERVICES=(
-  "api:./workers/api"
-  "worker-ingest:./workers/worker-ingest"
-  "worker-verify:./workers/worker-verify"
-  "worker-notify:./workers/worker-notify"
-  "rust_api:./services/rust_api"
-  "mqtt-monitor:./services/mqtt-monitor"
+  "api:../workers/api"
+  "worker-ingest:../workers/worker-ingest"
+  "worker-verify:../workers/worker-verify"
+  "worker-notify:../workers/worker-notify"
+  "rust_api:../services/rust_api"
+  "mqtt-monitor:../services/mqtt-monitor"
 )
 
 echo "🔨 Starting Docker builds..."

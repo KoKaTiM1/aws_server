@@ -1,46 +1,46 @@
 ﻿
 # AWS-SERVER
 
-Eyedar is an AWS-hosted animal detection pipeline. The system accepts detection events from the Rust API, stores images in S3, writes records to PostgreSQL, moves work through SQS, and eventually verifies detections and notifies users.
+Eyedar is an AWS-hosted animal detection system. The repository contains the Terraform infrastructure, the Rust API entry point, the worker services, and the deployment workflow that builds and pushes the runtime images to AWS.
 
-## What Lives Here
+## What This Project Does
 
-- `infra/` contains the Terraform infrastructure for AWS.
-- `services/rust_api/` contains the Rust entry point that receives alert uploads.
-- `workers/worker-ingest/` consumes new detections, persists them, and forwards work for verification.
-- `workers/worker-verify/` will fetch S3 images and run YOLO-based verification.
-- `workers/worker-notify/` sends push notifications after verified detections.
-- `workers/api/` contains the legacy Node API path used in earlier phases.
+1. Receives detection events through the Rust API.
+2. Stores uploaded images in S3.
+3. Writes detection records to PostgreSQL.
+4. Moves work through SQS for ingest, verification, and notification.
+5. Sends push notifications after a detection is verified.
 
-## Current Flow
+## Key AWS Resources
 
-1. A device or app submits an alert to the Rust API.
-2. The API stores the image in S3 and creates the detection record in RDS.
-3. The API publishes a message to `eyedar-prod-detection-created`.
-4. `worker-ingest` consumes that message, writes/normalizes the record, and publishes a verification request.
-5. `worker-verify` fetches the image from S3, runs YOLO, and routes the result.
-6. `worker-notify` sends notifications to the app when a detection is verified.
+- S3 bucket: `eyedar-prod-objects-v2`
+- ECS cluster: `eyedar-prod`
+- GitHub Actions role: `eyedar-prod-github-actions-deployer`
+- OIDC provider: `token.actions.githubusercontent.com`
+- Main queues: `eyedar-prod-detection-created`, `eyedar-prod-verify-requested`, `eyedar-prod-verified-animals`
 
 ## Repository Layout
 
 ```text
-infra/               Terraform root, envs, modules, IAM policies
-services/rust_api/   Rust API service and container build
-services/mqtt-monitor/ Optional Rust service for monitoring
-workers/api/         Legacy Node API service
-workers/worker-ingest/  SQS ingest worker
-workers/worker-verify/  YOLO verification worker
-workers/worker-notify/  FCM notification worker
-docs/ops/            Operational notes and deployment guides
+infra/                 Terraform root, envs, modules, and IAM policies
+services/rust_api/     Rust API service used as the main alert entry point
+services/mqtt-monitor/  Optional Rust monitoring service
+workers/api/            Legacy Node API service retained for earlier phases
+workers/worker-ingest/   SQS ingest worker
+workers/worker-verify/   YOLO verification worker
+workers/worker-notify/   FCM notification worker
+docs/ops/               Deployment and operational documentation
 ```
 
-## Canonical Docs
+## Build and Deploy Flow
 
-- [Deployment Guide](docs/ops/DEPLOYMENT.md)
-- [Project Review](PROJECT_REVIEW.md)
-- [Terraform Setup Reference](terraform_setup.pdf)
+The normal path is:
 
-Keep these as the source of truth for deployment steps, current status, and infrastructure expectations.
+1. Bootstrap AWS access for GitHub Actions with OIDC.
+2. Provision the infrastructure with Terraform.
+3. Store runtime secrets in AWS Secrets Manager.
+4. Build and push container images through GitHub Actions.
+5. Deploy the ECS services from the pushed images.
 
 ## Prerequisites
 
@@ -48,11 +48,15 @@ Keep these as the source of truth for deployment steps, current status, and infr
 - Terraform 1.7+ installed
 - Docker installed
 - Git installed
-- Firebase service account key available for notification setup
+- A Firebase service account JSON key for notifications
 
-## Bootstrap GitHub OIDC
+## 1. Bootstrap GitHub Actions Access
 
-Before the first Terraform or deployment run, create or update the GitHub Actions OIDC role used by the pipeline:
+Create the GitHub OIDC provider and the deploy role before running Terraform or CI/CD.
+
+The trust policy lives in [infra/iam/github-oidc-trust-policy.json](infra/iam/github-oidc-trust-policy.json) and the permissions policy lives in [infra/iam/github-actions-deployer-policy.json](infra/iam/github-actions-deployer-policy.json).
+
+Replace `YOUR_ACCOUNT_ID` in the trust policy, then run:
 
 ```powershell
 $AWS_REGION = "us-east-1"
@@ -63,36 +67,126 @@ aws iam create-open-id-connect-provider `
   --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1 `
   --region $AWS_REGION
 
-aws iam update-assume-role-policy `
+aws iam create-role `
   --role-name eyedar-prod-github-actions-deployer `
-  --policy-document file://infra/iam/github-oidc-trust-policy.json `
+  --assume-role-policy-document file://infra/iam/github-oidc-trust-policy.json `
+  --region $AWS_REGION
+
+aws iam put-role-policy `
+  --role-name eyedar-prod-github-actions-deployer `
+  --policy-name eyedar-github-actions-deployer `
+  --policy-document file://infra/iam/github-actions-deployer-policy.json `
   --region $AWS_REGION
 ```
 
-Set the repository variable `AWS_ACCOUNT_ID_A` to your AWS account ID.
+Set the repository variable `AWS_ACCOUNT_ID_A` to your AWS account ID so the workflow can assume the role.
 
-## Local Work
+## 2. Provision Infrastructure
 
-Useful checks while developing:
+The production Terraform root is [infra/envs/prod](infra/envs/prod).
 
 ```powershell
-terraform -chdir=infra/envs/prod plan
-terraform -chdir=infra/envs/prod validate
+cd infra/envs/prod
+terraform init
+terraform plan
+terraform apply
 ```
 
-## Deployment
+After apply, Terraform outputs include the S3 bucket name, queue URLs, ECS cluster name, and GitHub Actions role ARN.
 
-The GitHub Actions workflow in `.github/workflows/deploy.yml` builds the service images, pushes them to ECR, and triggers ECS deployments for the main runtime services.
+## 3. Configure Secrets
 
-If you need the operational walk-through, use [docs/ops/DEPLOYMENT.md](docs/ops/DEPLOYMENT.md).
+Populate the Secrets Manager values that the services expect:
 
-## Next Work
+- DB secret JSON with `username` and `password`
+- Firebase service account JSON
+- API keys payload for device/app auth
 
-- Finish API verification in the current phase.
-- Implement YOLO in `worker-verify`.
-- Complete notification and app messaging updates.
-- Refresh the worker and infra READMEs to match the current architecture.
+Example:
+
+```powershell
+aws secretsmanager put-secret-value `
+  --secret-id eyedar-prod-db-password-v3 `
+  --secret-string '{"username":"eyedar_admin","password":"<your-db-password>"}' `
+  --region us-east-1
+```
+
+## 4. Build and Push Images
+
+The preferred build path is GitHub Actions. The workflow in [.github/workflows/deploy.yml](.github/workflows/deploy.yml) builds the service images and pushes them to ECR using the `eyedar-prod-github-actions-deployer` role.
+
+If you want to build manually, use the same image names the workflow uses:
+
+```powershell
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
+
+docker build -t eyedar-prod-worker-ingest workers/worker-ingest
+docker tag eyedar-prod-worker-ingest:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/eyedar-prod-worker-ingest:latest
+docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/eyedar-prod-worker-ingest:latest
+```
+
+Repeat the same pattern for `worker-verify`, `worker-notify`, `rust_api`, and the API service as needed.
+
+## 5. Run the Stack
+
+Once Terraform, Secrets Manager, and ECR are in place, start the ECS services by forcing a new deployment:
+
+```powershell
+aws ecs update-service `
+  --cluster eyedar-prod `
+  --service eyedar-prod-rust-api `
+  --force-new-deployment `
+  --region us-east-1
+
+aws ecs update-service `
+  --cluster eyedar-prod `
+  --service eyedar-prod-worker-ingest `
+  --force-new-deployment `
+  --region us-east-1
+```
+
+The same approach applies to `worker-notify` and `worker-verify` once those services are enabled.
+
+## 6. Validate the System
+
+Use the Rust API test script to confirm the end-to-end alert flow:
+
+```powershell
+scripts/test_api_entry_point.ps1
+```
+
+The expected path is:
+
+1. Rust API receives the alert.
+2. Image is stored in `eyedar-prod-objects-v2`.
+3. The detection record is written to PostgreSQL.
+4. SQS hands work to `worker-ingest`.
+
+## Infrastructure Notes
+
+- Terraform keeps the S3 bucket name centralized in outputs and environment variables.
+- The GitHub OIDC provider and deploy role are required before CI/CD can access AWS.
+- The ECS services use private networking, SQS queues, Secrets Manager, and KMS-backed encryption.
+
+## Related Docs
+
+- [docs/ops/DEPLOYMENT.md](docs/ops/DEPLOYMENT.md)
+- [infra/README.md](infra/README.md)
+- [PROJECT_REVIEW.md](PROJECT_REVIEW.md)
+- [terraform_setup.pdf](terraform_setup.pdf)
+ 
+## Quick Links & Notes
+
+- **Run test script:** See [scripts/test_api_entry_point.ps1](scripts/test_api_entry_point.ps1). Run locally with:
+
+```powershell
+powershell ./scripts/test_api_entry_point.ps1
+```
+
+- **YOLO / `worker-verify`:** The YOLO verification flow is documented in [docs/ops/PROJECT_REVIEW.md](docs/ops/PROJECT_REVIEW.md). The container image for `worker-verify` is built by CI but the service is disabled by default in Terraform. To enable the service, set the variable `worker_verify_desired_count` to a value greater than `0` in the production environment and redeploy (see [infra/envs/prod/variables.tf](infra/envs/prod/variables.tf)). See [workers/worker-verify/README.md](workers/worker-verify/README.md) for runtime notes.
+
+- **Worker READMEs:** Per-worker run and config instructions are in [workers/worker-ingest/README.md](workers/worker-ingest/README.md) and [workers/worker-notify/README.md](workers/worker-notify/README.md).
 
 ## Status
 
-The project is in an active cleanup and feature-completion phase. The infrastructure exists, the ingest path is validated, and the remaining work is to complete verification, notifications, and the user-facing documentation.
+The platform is deployed and wired for build/deploy. The remaining work lives in the worker and application feature sets, not in the base infrastructure.
